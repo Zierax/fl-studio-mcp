@@ -13,7 +13,7 @@ Requirements:
 
 Limitations:
 - Cannot load new plugins (only control existing ones)
-- Cannot create new patterns programmatically
+- Cannot place clips on the playlist timeline programmatically
 """
 
 from __future__ import annotations
@@ -44,14 +44,16 @@ Available tool categories:
 - Transport: Play, stop, record, tempo, position control
 - Mixer: Volume, pan, mute, solo, track management
 - Channels: Channel info, note triggering, step sequencer
+- Patterns: Create, list, select, rename, clone, clear, set length
+- Step Sequencer: Program melodies with per-step pitch/velocity/pan
 - Plugins: Parameter control, preset navigation (cannot load new plugins)
 
 Important limitations:
 1. Cannot load new VST/AU plugins - only control existing ones
-2. Cannot create new patterns programmatically
+2. Cannot place clips on the playlist timeline programmatically
 3. Note triggering (fl_trigger_note) is real-time only - notes won't persist
-   unless FL Studio is recording. Use step sequencer (fl_set_grid_bit) for
-   persistent drum patterns.
+   unless FL Studio is recording. Use step sequencer (fl_set_grid_bit,
+   fl_set_channel_steps) for persistent patterns.
 """,
 )
 

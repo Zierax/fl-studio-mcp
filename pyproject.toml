@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "Karlo" }
+    { name = "Ziad Salah (Zierax)" }
 ]
 keywords = ["mcp", "fl-studio", "midi", "daw", "music-production", "piano-roll"]
 classifiers = [
