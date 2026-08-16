@@ -57,14 +57,14 @@ check_config_status() {
 
     if [[ -f "$config_file" ]]; then
         if grep -q "fl-studio" "$config_file" 2>/dev/null; then
-            echo -e "  ${GREEN}✓${NC} $config_name: Already configured"
+            echo -e "  ${GREEN}[OK]${NC} $config_name: Already configured"
             return 0
         else
-            echo -e "  ${YELLOW}○${NC} $config_name: Not configured"
+            echo -e "  ${YELLOW}[..]${NC} $config_name: Not configured"
             return 1
         fi
     else
-        echo -e "  ${YELLOW}○${NC} $config_name: Config file not found"
+        echo -e "  ${YELLOW}[..]${NC} $config_name: Config file not found"
         return 1
     fi
 }
@@ -118,7 +118,7 @@ with open(config_file, 'w') as f:
     json.dump(config, f, indent=2)
 EOF
 
-    echo -e "  ${GREEN}✓${NC} Added fl-studio MCP server"
+    echo -e "  ${GREEN}[OK]${NC} Added fl-studio MCP server"
 }
 
 # Show current status
@@ -200,7 +200,7 @@ echo ""
 echo -e "  2. ${YELLOW}Open FL Studio${NC} and configure the MIDI controller:"
 echo "     - Go to Options > MIDI Settings"
 echo "     - Select your virtual MIDI port (IAC Driver on Mac)"
-echo "     - Set Controller type to: FLStudioMCP"
+echo "     - Set Controller type to: FL Studio MCP Controller"
 echo "     - Enable the port (click to highlight)"
 echo ""
 echo -e "  3. ${YELLOW}Test the connection${NC} by asking Claude to get FL Studio status"

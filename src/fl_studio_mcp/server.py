@@ -6,7 +6,7 @@ This MCP server provides tools to control FL Studio through two mechanisms:
 
 Requirements:
 - FL Studio 20.7+ running
-- FLStudioMCP controller script installed (run: ./scripts/setup_mac.sh)
+- FLStudioMCP controller script installed (run: ./scripts/setup.sh)
 - On Mac: IAC Driver enabled in Audio MIDI Setup
 - On Windows: loopMIDI virtual MIDI ports configured
 - For piano roll: ComposeWithLLM.pyscript installed in FL Studio

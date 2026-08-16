@@ -10,8 +10,7 @@ this fork/derivative work.
 | Attribute   | Value                                                        |
 |-------------|--------------------------------------------------------------|
 | Repository  | https://github.com/karl-andres/fl-studio-mcp                 |
-| Role        | Backbone codebase - architecture, MIDI + JSON transport,     |
-|             | piano-roll integration, and the original tool set            |
+| Role        | Backbone codebase - architecture, MIDI + JSON transport, piano-roll integration, and the original tool set |
 | License     | MIT                                                          |
 
 The original project itself drew on:
@@ -29,9 +28,10 @@ The original project itself drew on:
 
 ## What Was Added / Changed In This Project
 
-- **Reworked the transport layer** - dropped the keystroke-based DAW control
-  path; all transport, mixer, channel, plugin, pattern, and step-sequencer
-  actions now run through the MIDI controller script (`FLStudioMCP`).
+- **Reworked the transport layer** - the keystroke-based DAW-control path
+  (ControlPlane) is no longer used by the MCP server; all transport, mixer,
+  channel, plugin, pattern, and step-sequencer actions now run through the
+  MIDI controller script (`FLStudioMCP`).
 - **Status, pattern, and step-sequencer capabilities were added:**
   - Pattern lifecycle: create / list / select / rename / clone / clear /
     set length (see `src/fl_studio_mcp/tools/patterns.py`).

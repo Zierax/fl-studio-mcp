@@ -158,7 +158,7 @@ Details and workarounds in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 +-----------+     stdio      +----------------+   MIDI + JSON    +--------------------+
 | MCP client| <------------> | FastMCP server | (note 127       |  FL Studio         |
 | (Claude,  |                |                |  trigger,       |  controller script |
-|  Cursor)  |                |                |  5s timeout)    |  transport, mixer, |
+|  Cursor)  |                |                |  2s timeout)    |  transport, mixer, |
 +-----------+                |                | --------------->|  channels,         |
                              |                |   JSON + hotkey  |  patterns, plugins |
                              |                | (Ctrl+Alt+Y,     |                    |
@@ -180,4 +180,4 @@ Full diagrams and message formats in
 
 ## License
 
-MIT - copyright (c) 2025 **Ziad Salah (Zierax)**. See [LICENSE](LICENSE).
+MIT - copyright (c) 2026 **Ziad Salah (Zierax)**. See [LICENSE](LICENSE).

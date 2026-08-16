@@ -162,7 +162,7 @@ def register_transport_tools(mcp: FastMCP) -> None:
         """Set the project tempo in BPM.
 
         Args:
-            bpm: Tempo in beats per minute (e.g. 140 for fast trap).
+            bpm: Tempo in beats per minute (e.g. 140).
                  Typical range: 60-200.
         """
         if not 20 <= bpm <= 999:

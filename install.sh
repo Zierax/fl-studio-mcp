@@ -23,9 +23,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  FL Studio MCP Server - Installation       ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
+echo -e "${BLUE}+--------------------------------------------+${NC}"
+echo -e "${BLUE}|  FL Studio MCP Server - Installation       |${NC}"
+echo -e "${BLUE}+--------------------------------------------+${NC}"
 echo ""
 
 # Step 1: Install uv if not present
@@ -42,14 +42,14 @@ if ! command -v uv &> /dev/null; then
         exit 1
     fi
 fi
-echo -e "${GREEN}✓${NC} uv is installed"
+echo -e "${GREEN}[OK]${NC} uv is installed"
 
-# Step 2: Install Python dependencies (3.12 — matches PyPI wheels for python-rtmidi on Windows)
+# Step 2: Install Python dependencies (3.12 - matches PyPI wheels for python-rtmidi on Windows)
 echo ""
 echo -e "${YELLOW}[2/5]${NC} Installing Python dependencies (Python 3.12)..."
 uv python install 3.12
 uv sync --python 3.12
-echo -e "${GREEN}✓${NC} Dependencies installed"
+echo -e "${GREEN}[OK]${NC} Dependencies installed"
 
 # Step 3: Set up virtual MIDI and FL Studio controller
 echo ""
@@ -71,12 +71,12 @@ echo ""
 echo -e "${YELLOW}[4/5]${NC} Verifying Piano Roll script..."
 FL_SCRIPTS="$HOME/Documents/Image-Line/FL Studio/Settings/Piano roll scripts"
 if [[ -f "$FL_SCRIPTS/ComposeWithLLM.pyscript" ]]; then
-    echo -e "${GREEN}✓${NC} Piano Roll script installed"
+    echo -e "${GREEN}[OK]${NC} Piano Roll script installed"
 else
     if [[ -f "$SCRIPT_DIR/scripts/ComposeWithLLM.pyscript" ]]; then
         mkdir -p "$FL_SCRIPTS"
         cp "$SCRIPT_DIR/scripts/ComposeWithLLM.pyscript" "$FL_SCRIPTS/"
-        echo -e "${GREEN}✓${NC} Piano Roll script installed"
+        echo -e "${GREEN}[OK]${NC} Piano Roll script installed"
     else
         echo -e "${YELLOW}!${NC} Piano Roll script not found - some features may be limited"
     fi
@@ -89,15 +89,15 @@ bash "$SCRIPT_DIR/scripts/install_mcp_for_claude.sh"
 
 # Done!
 echo ""
-echo -e "${GREEN}╔════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  Installation Complete!                    ║${NC}"
-echo -e "${GREEN}╚════════════════════════════════════════════╝${NC}"
+echo -e "${GREEN}+--------------------------------------------+${NC}"
+echo -e "${GREEN}|  Installation Complete!                    |${NC}"
+echo -e "${GREEN}+--------------------------------------------+${NC}"
 echo ""
 echo -e "Next steps:"
 echo -e "  1. ${BLUE}Restart FL Studio${NC} to load the controller"
-echo -e "  2. ${BLUE}Go to Options → MIDI Settings${NC} in FL Studio"
+echo -e "  2. ${BLUE}Go to Options -> MIDI Settings${NC} in FL Studio"
 echo -e "  3. ${BLUE}Select IAC Driver Bus 1${NC} (or your virtual MIDI port)"
-echo -e "  4. ${BLUE}Set Controller type to FLStudioMCP${NC}"
+echo -e "  4. ${BLUE}Set Controller type to FL Studio MCP Controller${NC}"
 echo -e "  5. ${BLUE}Enable the port${NC} (click to highlight)"
 echo -e "  6. ${BLUE}Restart Claude Desktop/Code${NC} to load the MCP server"
 echo ""
@@ -109,7 +109,7 @@ echo ""
 if [[ "$OSTYPE" == "darwin"* ]]; then
     echo -e "${YELLOW}macOS Note:${NC}"
     echo "  For piano roll auto-triggering, grant Accessibility permissions to"
-    echo "  Terminal and Claude Code in System Preferences → Privacy & Security"
+    echo "  Terminal and Claude Code in System Preferences -> Privacy & Security"
 elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
     echo -e "${YELLOW}Windows Note:${NC}"
     echo "  Install loopMIDI and create a virtual MIDI port."

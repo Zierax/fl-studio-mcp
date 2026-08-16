@@ -55,7 +55,7 @@ appears.
 - In loopMIDI: enable **"Log incoming"** / monitor and confirm the trigger
   note (note 127) arrives after a tool call.
 - In FL Studio **Script output**: a healthy controller receives `OnMidiMsg`
-  with note 127 (if debug logging is enabled in the script).
+  with note 127 (the script's `OnInit` prints a single startup line).
 
 ---
 
@@ -95,8 +95,10 @@ selection in MIDI Settings.
    `Ctrl+Alt+Y`. If FL Studio is minimized to the system tray or not
    running, the trigger cannot find the window and returns a warning -
    press the hotkey manually instead.
-4. Confirm the hotkey is actually bound: edit the script header if needed
-   (the `# shortName` / assignments) or press `Ctrl+Alt+Y` yourself and
+4. Confirm the hotkey is actually bound: the script declares its trigger
+   in its docstring (`Trigger: Cmd+Opt+Y / Ctrl+Alt+Y`); make sure the
+   script is listed under FL Studio's **Tools > Scripting** menu and that
+   no other script claims the same hotkey. Press `Ctrl+Alt+Y` yourself and
    watch **Script output**.
 5. After updating any server code, **fully restart the MCP client**
    (Claude Desktop/Code). Reconnecting the MCP server alone does NOT

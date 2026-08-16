@@ -46,9 +46,9 @@ echo "----------------------------------------------"
 if [[ "$OS" == "mac" ]]; then
     # Check if IAC Driver is available
     if system_profiler SPAudioDataType 2>/dev/null | grep -q "IAC Driver"; then
-        echo -e "${GREEN}✓ IAC Driver is available${NC}"
+        echo -e "${GREEN}[OK] IAC Driver is available${NC}"
     else
-        echo -e "${YELLOW}⚠ IAC Driver may not be enabled${NC}"
+        echo -e "${YELLOW}[!] IAC Driver may not be enabled${NC}"
     fi
 
     echo ""
@@ -98,10 +98,10 @@ CONTROLLER_DEST="$MCP_CONTROLLER_DIR/device_FLStudioMCP.py"
 
 if [[ -f "$CONTROLLER_SOURCE" ]]; then
     cp "$CONTROLLER_SOURCE" "$CONTROLLER_DEST"
-    echo -e "${GREEN}✓ Copied device_FLStudioMCP.py to FL Studio${NC}"
+    echo -e "${GREEN}[OK] Copied device_FLStudioMCP.py to FL Studio${NC}"
     echo "  Location: $MCP_CONTROLLER_DIR"
 else
-    echo -e "${RED}✗ Controller script not found at: $CONTROLLER_SOURCE${NC}"
+    echo -e "${RED}[X] Controller script not found at: $CONTROLLER_SOURCE${NC}"
     exit 1
 fi
 
@@ -122,10 +122,10 @@ PIANO_DEST="$FL_PIANO_SCRIPTS/ComposeWithLLM.pyscript"
 
 if [[ -f "$PIANO_SOURCE" ]]; then
     cp "$PIANO_SOURCE" "$PIANO_DEST"
-    echo -e "${GREEN}✓ Copied ComposeWithLLM.pyscript to FL Studio${NC}"
+    echo -e "${GREEN}[OK] Copied ComposeWithLLM.pyscript to FL Studio${NC}"
     echo "  Location: $FL_PIANO_SCRIPTS"
 else
-    echo -e "${YELLOW}⚠ Piano Roll script not found at: $PIANO_SOURCE${NC}"
+    echo -e "${YELLOW}[!] Piano Roll script not found at: $PIANO_SOURCE${NC}"
     echo "  Piano Roll tools will not be available."
 fi
 
@@ -140,13 +140,13 @@ cd "$PROJECT_DIR"
 if command -v uv &> /dev/null; then
     echo "Using uv to install dependencies..."
     uv sync
-    echo -e "${GREEN}✓ Dependencies installed with uv${NC}"
+    echo -e "${GREEN}[OK] Dependencies installed with uv${NC}"
 elif command -v pip &> /dev/null; then
     echo "Using pip to install dependencies..."
     pip install -e .
-    echo -e "${GREEN}✓ Dependencies installed with pip${NC}"
+    echo -e "${GREEN}[OK] Dependencies installed with pip${NC}"
 else
-    echo -e "${YELLOW}⚠ Neither uv nor pip found. Please install dependencies manually:${NC}"
+    echo -e "${YELLOW}[!] Neither uv nor pip found. Please install dependencies manually:${NC}"
     echo "  pip install -e ."
 fi
 
@@ -166,7 +166,7 @@ if [[ "$OS" == "mac" ]]; then
 else
     echo "   - Under 'Input', find your loopMIDI port"
 fi
-echo "   - Set the controller type to: ${GREEN}FLStudioMCP${NC}"
+echo "   - Set the controller type to: ${GREEN}FL Studio MCP Controller${NC}"
 echo "   - Enable the port (click to highlight)"
 echo ""
 echo "3. For Piano Roll features, first run in FL Studio:"

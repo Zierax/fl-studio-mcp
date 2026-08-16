@@ -89,7 +89,8 @@ Sequence for every command (implemented in
 4. Send a MIDI `note_on` message with **note = 127, velocity = 127** on the
    output port.
 5. Poll for `mcp_response.json` every 50 ms until it appears (default
-   timeout: 2-5 s), parse it, delete it, and return the result:
+   timeout: 2 s per tool call, 5 s at the raw transport layer), parse it,
+   delete it, and return the result:
 
    ```json
    {
@@ -106,8 +107,10 @@ Sequence for every command (implemented in
 Installed at:
 
 ```
-<FL Studio>/Settings/Hardware/FLStudioMCP/device_FLStudioMCP.py
+<Documents>/Image-Line/FL Studio/Settings/Hardware/FLStudioMCP/device_FLStudioMCP.py
 ```
+
+(on Windows: `Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\`)
 
 Handles `OnMidiMsg()`: any `note_on` with note 127 is treated as the trigger;
 it then reads `mcp_command.json`, dispatches the `action` string through a
@@ -145,9 +148,9 @@ virtual MIDI port in FL Studio's MIDI Settings.
 
 ### MIDI Ports
 
-- The server opens an **output** port. With loopMIDI, one pair of in/out
-  ports is created ("FLStudioMCP 1" and "FLStudioMCP 2"); the server holds
-  the output end and FL Studio reads the input end.
+- The server opens an **output** port. In loopMIDI, create a port (e.g.
+  `FLStudioMCP`); it appears in both FL Studio's Input and Output lists -
+  the server opens the output end, and FL Studio reads the input end.
 - FL Studio's MIDI Settings must have the corresponding **Input** port
   enabled and assigned **Controller type = FL Studio MCP Controller**
   (alternatively, type `FLStudioMCP` when selecting from the list).

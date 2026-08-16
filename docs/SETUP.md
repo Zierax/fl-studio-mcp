@@ -39,8 +39,8 @@ The installers will:
 3. Guide you through enabling virtual MIDI ports.
 4. Copy `fl_controller/device_FLStudioMCP.py` into
    `<Documents>\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\`.
-5. Copy the Piano Roll / Control Plane scripts
-   (`scripts/*.pyscript`) into FL Studio's script folders.
+5. Copy the Piano Roll script (`scripts/ComposeWithLLM.pyscript`) into
+   FL Studio's Piano roll scripts folder.
 6. Optionally register the server with Claude Desktop / Claude Code.
 
 After the installer, continue at
@@ -100,8 +100,11 @@ copy scripts\ComposeWithLLM.pyscript "%USERPROFILE%\Documents\Image-Line\FL Stud
 cp scripts/ComposeWithLLM.pyscript ~/Documents/Image-Line/FL\ Studio/Settings/Piano\ roll\ scripts/
 ```
 
-Optionally `scripts/ControlPlane.pyscript` as well (it is triggered by the
-`Ctrl+Alt+M` / `Cmd+Opt+M` hotkey).
+Optionally `scripts/ControlPlane.pyscript` as well (a standalone,
+keystroke-triggered alternative to the MIDI channel; it reads
+`mcp_control_request.json` from the `Settings\Scripts` folder and is
+triggered by the `Ctrl+Alt+M` / `Cmd+Opt+M` hotkey). The installers do
+not copy it.
 
 ### 4. Configure FL Studio MIDI Settings
 

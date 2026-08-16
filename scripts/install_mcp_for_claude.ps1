@@ -1,4 +1,4 @@
-# Configure Claude Desktop/Code to use the FL Studio MCP server (Windows)
+﻿# Configure Claude Desktop/Code to use the FL Studio MCP server (Windows)
 #
 # Adds the FL Studio MCP server configuration to Claude's config file.
 
@@ -180,7 +180,7 @@ Write-Host ""
 Write-Color "  2. Open FL Studio and configure the MIDI controller:" "Yellow"
 Write-Host "     - Go to Options > MIDI Settings"
 Write-Host "     - Select your virtual MIDI port (loopMIDI on Windows)"
-Write-Host "     - Set Controller type to: FLStudioMCP"
+Write-Host "     - Set Controller type to: FL Studio MCP Controller"
 Write-Host "     - Enable the port (click to highlight)"
 Write-Host ""
 Write-Color "  3. Test the connection by asking Claude to get FL Studio status" "Yellow"

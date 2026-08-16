@@ -28,7 +28,7 @@ Tools are grouped by category; the table format is:
 | `fl_get_song_length()` | Returns `ticks`, `seconds`, `milliseconds`. |
 | `fl_set_loop_mode(mode: str)` | `"pattern"` or `"song"`. |
 | `fl_set_playback_speed(speed: float)` | 0.25x - 4.0x. |
-| `fl_set_tempo(bpm: float)` | Set project tempo, 20-999 BPM (e.g. 140 for trap). |
+| `fl_set_tempo(bpm: float)` | Set project tempo, 20-999 BPM (e.g. 140). |
 | `fl_get_tempo()` | Returns `tempo` (float BPM). |
 | `fl_get_shuffle()` | Returns `shuffle` (0-100 swing %). |
 
