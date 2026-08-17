@@ -1,0 +1,393 @@
+{
+  "rounds": 5,
+  "total_calls": 40,
+  "overall": {
+    "calls": 40,
+    "successes": 40,
+    "success_rate": 1.0,
+    "latency_ms": {
+      "p50": 52.971,
+      "p90": 53.618,
+      "p95": 53.799,
+      "max": 54.598,
+      "mean": 53.017
+    }
+  },
+  "reads": {
+    "calls": 30,
+    "successes": 30,
+    "success_rate": 1.0,
+    "latency_ms": {
+      "p50": 52.932,
+      "p90": 53.339,
+      "p95": 53.7,
+      "max": 54.598,
+      "mean": 52.958
+    }
+  },
+  "writes": {
+    "calls": 5,
+    "successes": 5,
+    "success_rate": 1.0,
+    "latency_ms": {
+      "p50": 52.82,
+      "p90": 53.495,
+      "p95": 53.57,
+      "max": 53.645,
+      "mean": 53.002
+    }
+  },
+  "readbacks": {
+    "calls": 5,
+    "successes": 5,
+    "success_rate": 1.0,
+    "latency_ms": {
+      "p50": 53.468,
+      "p90": 53.722,
+      "p95": 53.757,
+      "max": 53.793,
+      "mean": 53.386
+    }
+  },
+  "tempo_restored": true,
+  "per_call": {
+    "transport.getStatus": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.633,
+        "p90": 52.955,
+        "p95": 52.975,
+        "max": 52.994,
+        "mean": 52.704
+      }
+    },
+    "transport.getTempo": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.967,
+        "p90": 53.047,
+        "p95": 53.072,
+        "max": 53.096,
+        "mean": 52.666
+      }
+    },
+    "channels.getCount": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.99,
+        "p90": 53.322,
+        "p95": 53.324,
+        "max": 53.327,
+        "mean": 53.029
+      }
+    },
+    "channels.getInfo": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.869,
+        "p90": 53.328,
+        "p95": 53.388,
+        "max": 53.449,
+        "mean": 52.884
+      }
+    },
+    "mixer.getTrackCount": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 53.044,
+        "p90": 53.205,
+        "p95": 53.224,
+        "max": 53.243,
+        "mean": 53.069
+      }
+    },
+    "mixer.getTrackInfo": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.872,
+        "p90": 54.321,
+        "p95": 54.46,
+        "max": 54.598,
+        "mean": 53.398
+      }
+    },
+    "transport.setTempo(128.0)": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 52.82,
+        "p90": 53.495,
+        "p95": 53.57,
+        "max": 53.645,
+        "mean": 53.002
+      }
+    },
+    "transport.getTempo(read-back)": {
+      "calls": 5,
+      "successes": 5,
+      "success_rate": 1.0,
+      "latency_ms": {
+        "p50": 53.468,
+        "p90": 53.722,
+        "p95": 53.757,
+        "max": 53.793,
+        "mean": 53.386
+      }
+    }
+  },
+  "raw": [
+    {
+      "call": "transport.getStatus",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.386
+    },
+    {
+      "call": "transport.getTempo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.974
+    },
+    {
+      "call": "channels.getCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.327
+    },
+    {
+      "call": "channels.getInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.601
+    },
+    {
+      "call": "mixer.getTrackCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.243
+    },
+    {
+      "call": "mixer.getTrackInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 54.598
+    },
+    {
+      "call": "transport.setTempo(128.0)",
+      "kind": "write",
+      "success": true,
+      "latency_ms": 53.645
+    },
+    {
+      "call": "transport.getTempo(read-back)",
+      "kind": "readback",
+      "success": true,
+      "latency_ms": 53.793
+    },
+    {
+      "call": "transport.getStatus",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.994
+    },
+    {
+      "call": "transport.getTempo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.967
+    },
+    {
+      "call": "channels.getCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.99
+    },
+    {
+      "call": "channels.getInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.449
+    },
+    {
+      "call": "mixer.getTrackCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.149
+    },
+    {
+      "call": "mixer.getTrackInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.833
+    },
+    {
+      "call": "transport.setTempo(128.0)",
+      "kind": "write",
+      "success": true,
+      "latency_ms": 53.269
+    },
+    {
+      "call": "transport.getTempo(read-back)",
+      "kind": "readback",
+      "success": true,
+      "latency_ms": 53.615
+    },
+    {
+      "call": "transport.getStatus",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.633
+    },
+    {
+      "call": "transport.getTempo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.096
+    },
+    {
+      "call": "channels.getCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.736
+    },
+    {
+      "call": "channels.getInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.146
+    },
+    {
+      "call": "mixer.getTrackCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.044
+    },
+    {
+      "call": "mixer.getTrackInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.783
+    },
+    {
+      "call": "transport.setTempo(128.0)",
+      "kind": "write",
+      "success": true,
+      "latency_ms": 52.82
+    },
+    {
+      "call": "transport.getTempo(read-back)",
+      "kind": "readback",
+      "success": true,
+      "latency_ms": 53.142
+    },
+    {
+      "call": "transport.getStatus",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.897
+    },
+    {
+      "call": "transport.getTempo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.257
+    },
+    {
+      "call": "channels.getCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.777
+    },
+    {
+      "call": "channels.getInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.354
+    },
+    {
+      "call": "mixer.getTrackCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.884
+    },
+    {
+      "call": "mixer.getTrackInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.872
+    },
+    {
+      "call": "transport.setTempo(128.0)",
+      "kind": "write",
+      "success": true,
+      "latency_ms": 52.594
+    },
+    {
+      "call": "transport.getTempo(read-back)",
+      "kind": "readback",
+      "success": true,
+      "latency_ms": 53.468
+    },
+    {
+      "call": "transport.getStatus",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.61
+    },
+    {
+      "call": "transport.getTempo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.034
+    },
+    {
+      "call": "channels.getCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.314
+    },
+    {
+      "call": "channels.getInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 52.869
+    },
+    {
+      "call": "mixer.getTrackCount",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.027
+    },
+    {
+      "call": "mixer.getTrackInfo",
+      "kind": "read",
+      "success": true,
+      "latency_ms": 53.906
+    },
+    {
+      "call": "transport.setTempo(128.0)",
+      "kind": "write",
+      "success": true,
+      "latency_ms": 52.684
+    },
+    {
+      "call": "transport.getTempo(read-back)",
+      "kind": "readback",
+      "success": true,
+      "latency_ms": 52.913
+    }
+  ]
+}

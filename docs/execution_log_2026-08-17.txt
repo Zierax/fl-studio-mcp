@@ -1,0 +1,21 @@
+09:20:12 channels.getAll {} -> {"success": true, "channels": [{"index": 0, "name": "808 Kick", "is_muted": false, "is_selected": true, "target_fx_track": 1}, {"index": 1, "name": "808 Clap", "is_muted": false, "is_selected": false, "target_fx_track": 2}, {"index": 2, "name": "808 HiHat", "is_muted": false, "is_selected": false, "target_fx_track": 3}, {"index": 3, "name": "808 Snare", "is_muted": false, "is_selected": false, "target_fx_track": 4}, {"index": 4, "name": "FLEX Bass", "is_muted": false, "is_selected": false, "target_fx_track": 5}]}
+09:20:12 mixer.getAllTracks {} -> {"success": true, "tracks": [{"index": 0, "name": "Master", "volume": 0.7999999998137355, "pan": 0.0, "is_muted": false, "is_solo": false}]}
+09:20:12 transport.getTempo {} -> {"success": true, "tempo": 130000}
+09:20:12 transport.getShuffle {} -> {"success": true, "shuffle": null, "error": "Shuffle not available in this FL Studio version"}
+09:20:12 patterns.list {} -> {"success": true, "patterns": [], "count": 0, "active": 1}
+09:20:56 transport.setTempo {"tempo": 145} -> {"success": true, "error": "Failed to set tempo: Range error"}
+09:20:57 patterns.create {"name": "INTRO"} -> {"success": true, "index": 2, "name": "INTRO", "created": true}
+09:20:57 patterns.create {"name": "HOOK"} -> {"success": true, "index": 3, "name": "HOOK", "created": true}
+09:20:57 patterns.create {"name": "VERSE"} -> {"success": true, "index": 4, "name": "VERSE", "created": true}
+09:20:57 patterns.create {"name": "BREAK"} -> {"success": true, "index": 5, "name": "BREAK", "created": true}
+09:20:57 patterns.create {"name": "HOOKB"} -> {"success": true, "index": 6, "name": "HOOKB", "created": true}
+09:20:57 patterns.create {"name": "VERSEB"} -> {"success": true, "index": 7, "name": "VERSEB", "created": true}
+09:20:57 patterns.create {"name": "OUTRO"} -> {"success": true, "index": 8, "name": "OUTRO", "created": true}
+09:20:57 patterns.list {} -> {"success": true, "patterns": [{"index": 0, "name": "Pattern 0", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 1, "name": "Pattern 1", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 2, "name": "INTRO", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 3, "name": "HOOK", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 4, "name": "VERSE", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 5, "name": "BREAK", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}, {"index": 6, "name": "HOOKB", "is_active": false, "length_beats": 16, "color": "-0xbfd1ad"}], "count": 7, "active": 8}
+09:23:20 patterns.setLength {"index": 2, "length": 16} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 3, "length": 32} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 4, "length": 32} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 5, "length": 16} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 6, "length": 32} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 7, "length": 32} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}
+09:23:20 patterns.setLength {"index": 8, "length": 16} -> {"success": true, "error": "setPatternLength failed: module 'patterns' has no attribute 'setPatternLength'"}

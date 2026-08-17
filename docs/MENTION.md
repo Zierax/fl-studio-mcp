@@ -1,6 +1,6 @@
 # Credits
 
-FL Studio MCP v1.0.0 is built on the work of several open projects.
+FL Studio MCP v1.1.1 is built on the work of several open projects.
 
 ## Backbone
 

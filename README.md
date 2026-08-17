@@ -5,7 +5,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets AI assistants
 patterns, step sequencer, piano roll, and the entire FL scripting API —
 over a virtual MIDI trigger + JSON command channel.
 
-> **Version 1.0.0** · MIT License · © 2026 Ziad Salah (Zierax)
+> **Version 1.1.1** · MIT License · © 2026 Ziad Salah (Zierax)
 
 ---
 
@@ -18,7 +18,7 @@ project bridges the gap:
 MCP client (Claude, Cursor, ...)
         │  stdio (JSON-RPC)
         ▼
-   FastMCP server (Python)          ── the 165 tools
+   FastMCP server (Python)          ── the 164 tools
         │  writes mcp_command.json + triggers MIDI note 127
         ▼
    FL Studio controller script      ── runs INSIDE FL Studio,

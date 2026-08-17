@@ -353,23 +353,6 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         conn.send_command("general.saveUndo", {"name": "MCP step sequence"})
         return f"Channel {channel}: wrote {len(seq)} steps"
 
-    @mcp.tool()
-    def fl_channel_step_param(channel: int, step: int, param: str, value: int | None = None) -> dict:
-        """Read/write a step parameter (velocity/pan/pitch/etc.) of a step.
-
-        Args:
-            channel: Channel index.
-            step: Step index.
-            param: 'velocity','pan','pitch','release','fine_pitch','mod_x',
-                   'mod_y','shift','repeat' or raw index.
-            value: Optional value to write (else read).
-        """
-        conn = get_connection()
-        params: dict = {"channel": channel, "step": step, "param": param}
-        if value is not None:
-            params["value"] = value
-        return conn.send_command("channels.stepParam", params)
-
     # ---------------------------------------------------------------
     # Plugin surface
     # ---------------------------------------------------------------

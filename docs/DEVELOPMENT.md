@@ -81,7 +81,7 @@ Three version numbers exist; keep them in sync:
 | Where | What it is |
 |-------|------------|
 | `fl_controller/device_FLStudioMCP.py` → `MCP_VERSION` | The hot-reload marker. **Must change on every controller edit.** Use the same number as the tag (`1`, `1.1`, ...). |
-| `pyproject.toml` → `version` | The Python package version (`1.0.0`). |
+| `pyproject.toml` → `version` | The Python package version (`1.1.1`). |
 | Git tag | The release, e.g. `v1`. |
 
 Release checklist:
