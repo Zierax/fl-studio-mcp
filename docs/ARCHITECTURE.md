@@ -1,211 +1,104 @@
 # Architecture
 
-> This document describes how FL Studio MCP actually works internally: the
-> two communication channels, the message protocol, and the key files.
+FL Studio is a closed desktop app — its only scripting path is its own
+MIDI-controller Python API, which runs *inside* the DAW. This project bridges
+the gap with a two-process design.
 
-## High-Level Overview
-
-The MCP server needs to run commands *inside* FL Studio. FL Studio does not
-expose a public automation/network API, but it does run **MIDI controller
-scripts** written in its internal Python (the `midi` module). The project
-leverages a controller script named **FL Studio MCP Controller**
-(`device_FLStudioMCP.py`) installed in FL Studio's Hardware folder.
-
-The server talks to that script through two independent channels:
+## Overview
 
 ```
-+-------------------+                      +---------------------------+
-|   MCP Client      |   stdio (JSON-RPC)   |      MCP Server           |
-|  Claude Desktop,  | <------------------->|  FastMCP (Python)         |
-|  Claude Code,     |                      |  server.py                |
-|  Cursor, ...      |                      |                           |
-+-------------------+                      |  +--------------------+   |
-                                           |  | tools/             |   |
-                                           |  | transport.py       |   |
-                                           |  | mixer.py           |   |
-                                           |  | channels.py        |   |
-                                           |  | patterns.py        |   |
-                                           |  | sequencer.py       |   |
-                                           |  | plugins.py         |   |
-                                           |  | piano_roll.py      |   |
-                                           |  +----------+---------+   |
-                                           |             |             |
-                                           |  +----------+---------+   |
-                                           |  | utils/             |   |
-                                           |  | midi_connection.py |   |
-                                           |  | connection.py      |   |
-                                           |  | fl_trigger.py      |   |
-                                           |  +--------------------+   |
-                                           +-------------+-------------+
-                                                         |
-          Channel A (MIDI + JSON)                 Channel B (Piano Roll)
-                                                         |
-                     +---------------------+    +--------+--------+
-                     |  virtual MIDI port  |    |  JSON request   |
-                     |  (loopMIDI / IAC)   |    |  file + hotkey  |
-                     +----------+----------+    +--------+--------+
-                                |                          |
-                     +----------v----------+    +----------v----------+
-                     |   FL Studio         |    |   FL Studio         |
-                     |  MIDI controller    |    |  Piano Roll script  |
-                     |  script             |    |  (ComposeWithLLM)   |
-                     |  FLStudioMCP        |    |                     |
-                     +---------------------+    +---------------------+
++-------------+   stdio (JSON-RPC)   +--------------------+   files + MIDI   +-----------------------+
+| MCP client  | <------------------> | FastMCP server     |  mcp_command.json   | FL Studio          |
+| (Claude,    |                       | (Python, the 100+ |  + note 127         | controller script  |
+|  Cursor,    |                       |  tools)            | -----------------> | device_FLStudioMCP |
+|  ...)       |                       |                    |  mcp_response.json  | (runs in FL Studio)|
++-------------+                       +--------------------+ <----------------- +-----------------------+
 ```
 
-- **Channel A (MIDI + JSON)** - all transport, mixer, channel, plugin,
-  pattern, and step-sequencer actions.
-- **Channel B (Piano Roll)** - persistent note/piano-roll edits, using the
-  Piano Roll scripting API.
+## The two halves
 
-## Channel A - MIDI + JSON Command Protocol
+### 1. The MCP server (this repository's Python)
 
-Files exchanged (inside the FL Studio hardware scripts folder):
+- Entry point: `src/fl_studio_mcp/server.py` (FastMCP over stdio).
+- Tools are grouped in `src/fl_studio_mcp/tools/` and register into the server
+  at startup (`register_*_tools` in `tools/__init__.py`).
+- To talk to FL Studio it:
+  1. Writes the command as JSON to `mcp_command.json` in FL's
+     `Settings/Hardware/FLStudioMCP/` folder.
+  2. Sends a MIDI **note-on 127** on the connected virtual port — this is the
+     "doorbell" that makes the controller read the file.
+  3. Waits (configurable timeout, default 2 s) for `mcp_response.json` to
+     appear, then returns its contents to the client.
+- MIDI plumbing lives in `src/fl_studio_mcp/utils/`:
+  - `midi_connection.py` — finds a usable MIDI port (tries a candidate list;
+    the first one that answers a ping wins) and exposes `send_trigger()`.
+  - `connection.py` — the JSON round-trip (`send_command`) and connection state.
 
-| File                      | Writer          | Reader          | Purpose              |
-|---------------------------|-----------------|-----------------|----------------------|
-| `mcp_command.json`        | MCP server      | controller      | Command + params     |
-| `mcp_response.json`       | controller      | MCP server      | Command result       |
+### 2. The controller script (lives *inside* FL Studio)
 
-Sequence for every command (implemented in
-`src/fl_studio_mcp/utils/midi_connection.py`):
-
-1. Ensure an output MIDI port is open. Port selection order:
-   1. First port whose name contains `FLStudioMCP`
-   2. Else first port whose name contains `loopMIDI`
-   3. Else the first available output port
-2. Write the command to `mcp_command.json`:
-
-   ```json
-   {
-     "action": "transport.start",
-     "params": {}
-   }
-   ```
-
-   Every action has the form `category.verb`, e.g. `mixer.setTrackVolume`,
-   `patterns.create`, `channels.setSteps`.
-3. Delete any stale `mcp_response.json`.
-4. Send a MIDI `note_on` message with **note = 127, velocity = 127** on the
-   output port.
-5. Poll for `mcp_response.json` every 50 ms until it appears (default
-   timeout: 2 s per tool call, 5 s at the raw transport layer), parse it,
-   delete it, and return the result:
-
-   ```json
-   {
-     "success": true,
-     "is_playing": false
-   }
-   ```
-
-6. If no response arrives in time, return
-   `{"success": false, "error": "Timeout waiting for FL Studio response..."}`.
-
-### Controller Script (`fl_controller/device_FLStudioMCP.py`)
-
-Installed at:
+`fl_controller/device_FLStudioMCP.py` is a standard FL Studio MIDI controller
+script. It must be copied to:
 
 ```
-<Documents>/Image-Line/FL Studio/Settings/Hardware/FLStudioMCP/device_FLStudioMCP.py
+%USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\
 ```
 
-(on Windows: `Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\`)
+Its loop is `OnMidiMsg()` → if the incoming message is **note 127** →
+`execute_pending_command()`:
 
-Handles `OnMidiMsg()`: any `note_on` with note 127 is treated as the trigger;
-it then reads `mcp_command.json`, dispatches the `action` string through a
-handler table, and writes the result to `mcp_response.json`.
+1. Read `mcp_command.json`.
+2. Dispatch on `action`:
+   - `raw.call` / `raw.list` / `raw.consts` — universal passthrough to any
+     function/constant of FL's API modules (`channels`, `mixer`, `transport`,
+     `patterns`, `playlist`, `general`, `ui`, `arrangement`, `plugins`,
+     `device`, `midi`).
+   - `transport.*`, `mixer.*`, `channels.*`, ... — high-level action handlers
+     that use those raw calls under the hood (e.g. `channels.getAll`,
+     `mixer.getAllTracks`).
+   - `system.*` — introspection: which modules exist, the full callable
+     surface, constants.
+3. Write the result (serialized) to `mcp_response.json`.
 
-Supported action categories (see [TOOLS.md](TOOLS.md) for the exact mapping):
+So the "raw" tools (`fl_raw_command`, `fl_api_list_functions`,
+`fl_api_list_constants`) are just thin client-side wrappers over the same
+passthrough — whatever FL exposes, the client can reach.
 
-| Category  | Actions                                                              |
-|-----------|----------------------------------------------------------------------|
-| transport | start, stop, record, getStatus, setPosition, getLength, setLoopMode, |
-|           | setPlaybackSpeed, getTempo, setTempo, getShuffle                     |
-| patterns  | count, list, get, create, select, rename, clone, duplicate, clear,   |
-|           | setLength, move                                                      |
-| mixer     | getTrackCount, getTrackInfo, getAllTracks, setTrackVolume,           |
-|           | setTrackPan, muteTrack, soloTrack, armTrack, setTrackName,           |
-|           | setTrackColor, setStereoSep                                          |
-| channels  | getCount, getInfo, getAll, getSelected, select, selectOne,           |
-|           | triggerNote, setVolume, setPan, mute, solo, setName, setColor,       |
-|           | routeToMixer, getType, setPitch, getSteps, setSteps, clearSteps,     |
-|           | getGridBit, setGridBit, getStepSequence, setStepSequence             |
-| plugins   | isValid, getName, getParamCount, getParams, getParamValue,           |
-|           | setParamValue, getPresetCount, nextPreset, prevPreset, getColor      |
+## Hot reload
 
-The header of the script matters; a mismatch between the device's folder name
-and `# supportedDevices` makes FL Studio refuse to load it (load -> unload
-loops). Required header:
+The controller re-reads its own file once per second (`OnIdle()` →
+`_check_hot_reload()`). If the `MCP_VERSION = N` marker at the top of the file
+changed, it re-compiles and re-executes itself. This means:
 
-```python
-# name=FL Studio MCP Controller
-# supportedDevices=FLStudioMCP
-```
+- You can edit `fl_controller/device_FLStudioMCP.py` in the repo and copy it
+  over — **no "Update MIDI scripts" needed**, no FL restart.
+- Version bumps must be *unique-ish and monotonic* — reuse a previous number
+  and FL will think nothing changed. See
+  [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the release process.
 
-`supportedDevices` must exactly match the device name registered for the
-virtual MIDI port in FL Studio's MIDI Settings.
-
-### MIDI Ports
-
-- The server opens an **output** port. In loopMIDI, create a port (e.g.
-  `FLStudioMCP`); it appears in both FL Studio's Input and Output lists -
-  the server opens the output end, and FL Studio reads the input end.
-- FL Studio's MIDI Settings must have the corresponding **Input** port
-  enabled and assigned **Controller type = FL Studio MCP Controller**
-  (alternatively, type `FLStudioMCP` when selecting from the list).
-
-## Channel B - Piano Roll (JSON + Hotkey)
-
-The Piano Roll scripting API runs in FL Studio's *Piano roll scripts* folder
-via `ComposeWithLLM.pyscript` (bound to `Ctrl+Alt+Y` / `Cmd+Opt+Y`). The MCP
-server cannot call this API directly, so it:
-
-1. Appends requests to `<Settings>/Piano roll scripts/mcp_request.json`.
-2. Sends the hotkey (`fl_trigger.py` foregrounds the FL Studio window on
-   Windows, then uses `pynput` to press `Ctrl+Alt+Y`).
-3. The script reads the requests, edits notes, and exports state to
-   `piano_roll_state.json`.
-
-Because this path uses a global hotkey, FL Studio briefly comes to the
-foreground on Windows whenever a piano-roll tool runs.
-
-## Connection Lifecycle
-
-- `FLConnection` (in `utils/connection.py`) wraps a module-level
-  `MIDIConnection` singleton.
-- The connection is **lazy**: the first tool call triggers a connect.
-- `fl_connect` calls `reset_connection()` to force a fresh attempt, and
-  `fl_connection_status` reports the port in use and every port it found.
-
-## File Layout
+## Message flow example
 
 ```
-FL-MCP/
-+-- fl_controller/
-|   +-- device_FLStudioMCP.py         # MIDI controller script (in FL Studio)
-+-- scripts/
-|   +-- ComposeWithLLM.pyscript       # Piano Roll script (in FL Studio)
-|   +-- ControlPlane.pyscript         # Control Plane script (in FL Studio)
-|   +-- setup.sh                      # script installer (macOS/Linux)
-|   +-- install_mcp_for_claude.sh     # Claude config installer (macOS/Linux)
-|   +-- install_mcp_for_claude.ps1    # Claude config installer (Windows)
-+-- src/fl_studio_mcp/
-|   +-- server.py                     # FastMCP entry point
-|   +-- tools/
-|   |   +-- transport.py              # transport tools (+ tempo/shuffle)
-|   |   +-- mixer.py                  # mixer tools
-|   |   +-- channels.py               # channel rack tools (+ type/pitch)
-|   |   +-- patterns.py               # pattern lifecycle tools
-|   |   +-- sequencer.py              # step-sequencer composition tools
-|   |   +-- plugins.py                # plugin parameter tools
-|   |   +-- piano_roll.py             # piano-roll tools (hotkey channel)
-|   +-- utils/
-|       +-- connection.py             # FLConnection wrapper
-|       +-- midi_connection.py        # MIDI + JSON transport
-|       +-- fl_trigger.py             # hotkey trigger (macOS/Windows)
-+-- install.sh / install.ps1          # one-command installers
-+-- pyproject.toml                    # uv/pip project definition
-+-- README.md                         # project index
-+-- docs/                             # this documentation set
+client: fl_set_tempo(bpm=140)
+server: {"action": "tempo.set", "params": {"bpm": 140.0}}
+        → write mcp_command.json
+        → MIDI note 127 on port "FLStudioMCP 1"
+FL:     OnMidiMsg → execute_pending_command → mixer.setCurrentTempo(...)
+        → write mcp_response.json {"success": true, ...}
+server: reads response → returns to client
 ```
+
+## Failure semantics
+
+- **Timeout**: no `mcp_response.json` within the deadline → the tool returns
+  an error. Usual causes: FL not running, port not enabled, controller type
+  not selected, or the script errored (check **Script output**).
+- **Stale response**: the server deletes `mcp_response.json` before each
+  trigger so an old file can never be mistaken for a fresh answer.
+- **Serialization**: results are wrapped as `{"value": ...}` or
+  `{"success": true, ...}`; lists/bytes are converted to JSON-safe forms.
+
+## Port names
+
+loopMIDI creates `FLStudioMCP 0`, `FLStudioMCP 1`, ... — the server's default
+candidate list tries `FLStudioMCP 1`, `FLStudioMCP 0`, and generic names.
+`fl_connect(port_name=...)` can force a specific port.

@@ -1,56 +1,64 @@
-﻿# FL Studio MCP Server
+﻿# FL Studio MCP
 
 An [MCP](https://modelcontextprotocol.io) server that lets AI assistants
-control **FL Studio** - transport, mixer, channel rack, plugin parameters,
-pattern management, step-sequencer composition, and the piano roll - over a
-virtual MIDI connection and FL Studio's own scripting APIs.
+**control FL Studio fully** — transport, mixer, channel rack, plugins,
+patterns, step sequencer, piano roll, and the entire FL scripting API —
+over a virtual MIDI trigger + JSON command channel.
 
-Built on the backbone of
-[karl-andres/fl-studio-mcp](https://github.com/karl-andres/fl-studio-mcp)
-(see [docs/MENTION.md](docs/MENTION.md)).
+> **Version 1.0.0** · MIT License · © 2026 Ziad Salah (Zierax)
+
+---
+
+## Why this exists
+
+FL Studio's scripting API is powerful but unreachable from Python. This
+project bridges the gap:
+
+```
+MCP client (Claude, Cursor, ...)
+        │  stdio (JSON-RPC)
+        ▼
+   FastMCP server (Python)          ── the 100+ tools
+        │  writes mcp_command.json + triggers MIDI note 127
+        ▼
+   FL Studio controller script      ── runs INSIDE FL Studio,
+        │  executes the FL scripting API, writes mcp_response.json
+        ▼
+   FL Studio project                ── the DAW itself
+```
 
 ## Features
 
-| Area | What you can do |
-|------|-----------------|
-| Transport | Play / pause / stop, record, seek, song length, loop mode, playback speed, tempo (BPM), shuffle readback |
-| Mixer | Volume, pan, mute, solo (4 modes), record-arm, names, colors, stereo separation |
-| Channel rack | List/inspect channels, select, route to mixer, real-time note trigger, volume/pan/mute/solo/name/color, channel type, coarse pitch |
-| Patterns | Create, list, select, rename, clone, clear, set length |
-| Step sequencer | Program **melodies** with per-step pitch, velocity, and pan; read back and clear patterns |
-| Plugins | List parameters, get/set values, preset navigation (existing plugins only) |
-| Piano roll | Add notes/chords with precise timing, delete notes, clear, read state |
-
-## Documentation
-
-The [docs/](docs/) folder is the full reference:
-
-| Document | Contents |
-|----------|----------|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the MIDI + JSON and Piano Roll channels work internally |
-| [docs/SETUP.md](docs/SETUP.md) | Step-by-step installation on Windows and macOS |
-| [docs/TOOLS.md](docs/TOOLS.md) | Every tool with arguments, defaults, and examples |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Fixes for connection/trigger problems |
-| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What the FL Studio API does and does not allow |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Working on the codebase, adding tools |
-| [docs/MENTION.md](docs/MENTION.md) | Backbone project and credit attribution |
+| Area | Capabilities |
+|------|--------------|
+| **Transport** | Play, stop, record, song position/length, loop mode, playback speed, tempo, shuffle |
+| **Mixer** | Volume, pan, mute, solo, arm, name, color, stereo separation; routing, sends, EQ, FX slots, peaks |
+| **Channel rack** | List/inspect/select channels, live note triggering, volume/pan/mute/solo/name/color, pitch, step sequences, shuffle |
+| **Patterns** | Create, list, select, rename, clone, clear, set length |
+| **Plugins** | Name, parameter list/get/set, presets, colors |
+| **Step sequencer** | Read/write/clear step patterns with per-step pitch, velocity, pan |
+| **Piano roll** | Add notes/chords (exact timing), delete, clear, read state |
+| **Playlist** | Track names, colors, mute/solo/select, full playlist state |
+| **Advanced** | Raw access to every function of every FL API module, undo history, project info, markers, device info, UI automation hints |
 
 ## Requirements
 
-- **FL Studio 20.7+** (MIDI controller scripting API)
+- **FL Studio 20.7+** on Windows or macOS (tested on FL Studio 2025 / Windows)
 - **Python 3.10+**
-- **uv** (recommended): https://github.com/astral-sh/uv
+- **[uv](https://github.com/astral-sh/uv)** (recommended package manager)
 - A virtual MIDI port:
   - Windows: [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)
-  - macOS: IAC Driver (built-in, must be enabled in Audio MIDI Setup)
+  - macOS: IAC Driver (enable it in Audio MIDI Setup)
 
-## Quick Start
+## Quick start
 
-### One-command installer
+### 1. Install the controller script in FL Studio
+
+Run the installer, or copy `fl_controller/device_FLStudioMCP.py` manually (see
+[docs/SETUP.md](docs/SETUP.md) for both options):
 
 ```powershell
 # Windows (PowerShell)
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force   # once
 .\install.ps1
 ```
 
@@ -59,21 +67,15 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force   # once
 ./install.sh
 ```
 
-The installer installs uv + dependencies, copies the FL Studio scripts into
-place, and registers the server with Claude Desktop/Claude Code.
+### 2. Point FL Studio at the script
 
-### Then, in FL Studio
+1. Restart FL Studio (or press **Options → Update MIDI scripts**).
+2. **Options → MIDI Settings** → under **Input**, select your virtual port
+   (e.g. `FLStudioMCP 1`).
+3. Set its **Controller type** to `FL Studio MCP Controller` and enable the
+   port.
 
-1. Restart FL Studio (or use **Update MIDI scripts** after copying scripts).
-2. **Options > MIDI Settings**.
-3. Under **Input**, select your virtual port (e.g. `FLStudioMCP 1`).
-4. Set its **Controller type** to **FL Studio MCP Controller** and enable
-   the port (highlight it).
-
-> The full manual installation is in [docs/SETUP.md](docs/SETUP.md). If
-> commands time out, start at [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
-
-### MCP client configuration
+### 3. Connect the server
 
 ```json
 {
@@ -86,98 +88,66 @@ place, and registers the server with Claude Desktop/Claude Code.
 }
 ```
 
-(Adjust `--directory` to your clone; use `/path/to/FL-MCP` on macOS/Linux.)
+Adjust `--directory` to your clone (or `/path/to/FL-MCP` on macOS/Linux).
+The server is a standard stdio MCP server — any MCP client can use it.
 
-This is a standard stdio MCP server, so any MCP-capable client can use the
-same `command`/`args` pair. Only Claude Desktop and Claude Code are
-covered by the installer scripts and are tested.
+Then talk to it in natural language:
 
-## Usage
+> "Connect to FL Studio, set the tempo to 140 BPM and create a pattern named 'Drop'."
 
-Run manually for testing:
+> "Program a kick on steps 0, 4, 8, 12 of channel 0 and a snare on steps 4 and 12 of channel 1."
 
-```bash
-uv run fl-studio-mcp
-```
+> "Set mixer track 3 volume to 80%, pan it slightly left, and solo track 1."
 
-Then, from your MCP client, call `fl_connect` first, then e.g.
-`fl_get_transport_status`. See [docs/TOOLS.md](docs/TOOLS.md) for the full
-tool catalog.
+## Documentation
 
-## Example Workflows
+Everything lives in [docs/](docs/):
 
-Natural-language prompts that work in any MCP client:
+| Document | Contents |
+|----------|----------|
+| [docs/SETUP.md](docs/SETUP.md) | Full installation: Windows, macOS, manual vs installer, first run |
+| [docs/TOOLS.md](docs/TOOLS.md) | The complete tool catalog with arguments and examples |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the MIDI + JSON bridge and hot-reload work |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Fixes for the problems people actually hit |
+| [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What the FL Studio API can and cannot do |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Adding tools, versioning, releasing |
+| [docs/MENTION.md](docs/MENTION.md) | Credits and backbone projects |
 
-```
-"Connect to FL Studio and show me the current tempo and transport state."
-```
+## Known limitations (summary)
 
-```
-"Set the tempo to 140 BPM, then create a new pattern named 'Drop'."
-```
+- The FL Studio scripting API **cannot create channels or load audio files** —
+  the server controls whatever already exists in the project.
+- **Playlist clips cannot be placed programmatically** — pattern management is
+  fully automated, arranging on the timeline is not.
+- Live-triggered notes are not persisted unless recording is on; for written
+  music use the step sequencer or piano roll tools.
 
-```
-"Program a kick pattern on channel 0 with kicks on steps 0, 4, 8, 12
- and a snare on steps 4 and 12 of channel 1."
-```
+Full details: [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-```
-"On channel 2, program a 16th-note melody: C4, E4, G4, A4 with
- velocity accents on the upbeats."
-```
+## Project layout
 
 ```
-"Set mixer track 3 volume to 80% and pan it slightly left, then solo
- track 1."
+fl_controller/
+  device_FLStudioMCP.py   ← the script that runs inside FL Studio (hot-reloadable)
+src/fl_studio_mcp/
+  server.py               ← MCP entry point + connection tools
+  utils/                  ← MIDI trigger, JSON command channel, connection
+  tools/                  ← 9 tool groups: transport, mixer, channels, patterns,
+                             plugins, sequencer, piano_roll, advanced, fullcontrol
+scripts/                  ← installer helpers (.pyscript legacy, .ps1/.sh)
+docs/                     ← this documentation
+install.ps1 / install.sh  ← one-command installers
 ```
-
-```
-"Add a C major arpeggio to the piano roll starting at beat 0: C4, E4,
- G4, C5, each a quarter note long."
-```
-
-```
-"List the parameters of the plugin on channel 0 and set the filter
- cutoff to 50%."
-```
-
-## Limitations (summary)
-
-- **Cannot load plugins or create channels** - instruments must already
-  exist in the project; the server controls and programs what is there.
-- **Cannot place playlist clips** - arrange patterns on the timeline
-  yourself; pattern management is fully automated.
-- Real-time note triggering is not persisted unless recording - use the
-  step sequencer or piano roll tools for written music.
-
-Details and workarounds in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
-
-## Architecture (summary)
-
-```
-+-----------+     stdio      +----------------+   MIDI + JSON    +--------------------+
-| MCP client| <------------> | FastMCP server | (note 127       |  FL Studio         |
-| (Claude,  |                |                |  trigger,       |  controller script |
-|  Cursor)  |                |                |  2s timeout)    |  transport, mixer, |
-+-----------+                |                | --------------->|  channels,         |
-                             |                |   JSON + hotkey  |  patterns, plugins |
-                             |                | (Ctrl+Alt+Y,     |                    |
-                             |                |  ~2s delay)      |  piano roll script |
-                             +----------------+                  |  notes, chords     |
-                                                                  +-------------------+
-```
-
-Full diagrams and message formats in
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Credits
 
-- [karl-andres/fl-studio-mcp](https://github.com/karl-andres/fl-studio-mcp) - backbone project (see [docs/MENTION.md](docs/MENTION.md))
-- [calvinw/fl-studio-mcp](https://github.com/calvinw/fl-studio-mcp) - piano roll integration approach
-- [IL-Group/FL-Studio-API-Stubs](https://github.com/IL-Group/FL-Studio-API-Stubs) - FL Studio API reference
-- [FastMCP](https://github.com/jlowin/fastmcp) - MCP server framework
-- [mido](https://github.com/mido/mido) - MIDI library for Python
+Built on the backbone of
+[karl-andres/fl-studio-mcp](https://github.com/karl-andres/fl-studio-mcp)
+(piano roll integration inspired by
+[calvinw/fl-studio-mcp](https://github.com/calvinw/fl-studio-mcp)). FL API
+reference: [IL-Group/FL-Studio-API-Stubs](https://github.com/IL-Group/FL-Studio-API-Stubs).
+See [docs/MENTION.md](docs/MENTION.md).
 
 ## License
 
-MIT - copyright (c) 2026 **Ziad Salah (Zierax)**. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

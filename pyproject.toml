@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fl-studio-mcp"
-version = "0.1.0"
-description = "MCP server for controlling FL Studio - mixer, transport, channels, plugins, and piano roll"
+version = "1.0.0"
+description = "MCP server for controlling FL Studio - transport, mixer, channels, patterns, plugins, piano roll, and full scripting API surface"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

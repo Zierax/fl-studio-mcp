@@ -1,190 +1,146 @@
-# Setup Guide
+# Setup
 
-Detailed, step-by-step setup for running the FL Studio MCP server. If you are
-in a hurry, the one-command installers cover everything except the final FL
-Studio MIDI settings.
+This guide installs **FL Studio MCP** from a clone of the repository.
+There are two ways: the one-command installer, or manual setup. Both are
+covered below for Windows and macOS.
 
 ## Prerequisites
 
-| Requirement          | Version / Notes                              |
-|----------------------|----------------------------------------------|
-| FL Studio            | 20.7+ (needs the MIDI / Python scripting)    |
-| Python               | 3.10+ (3.11-3.12 recommended)                |
-| uv (recommended)     | https://github.com/astral-sh/uv              |
-| Virtual MIDI port    | loopMIDI (Windows) or IAC Driver (macOS)     |
-| MCP-capable client   | Claude Desktop, Claude Code, Cursor, ...     |
+- **FL Studio 20.7+** — the MIDI controller scripting API is required.
+  The project has been tested on FL Studio 2025 (Windows).
+- **Python 3.10+**
+- **[uv](https://github.com/astral-sh/uv)** — installs dependencies and runs
+  the server (avoid polluting your system Python).
+- **A virtual MIDI port**:
+  - Windows: [loopMIDI](http://www.tobias-erichsen.de/software/loopmidi.html)
+    — install it, open it, and add one port (e.g. `FLStudioMCP`). loopMIDI
+    auto-names ports `FLStudioMCP 0`, `FLStudioMCP 1`, etc.
+  - macOS: IAC Driver — enable it in **Applications → Utilities → Audio MIDI
+    Setup → IAC Driver → double-click → "Device is online"**.
 
-## Option A - One-Command Installer
-
-### Windows
+## Option A — Installer (recommended)
 
 ```powershell
-# allow local scripts for this user (one-time)
+# Windows (PowerShell) — run once for execution policy, then install
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
-
-# run the installer
 .\install.ps1
 ```
 
-### macOS / Linux
-
 ```bash
+# macOS / Linux
 ./install.sh
 ```
 
-The installers will:
+The installer:
 
-1. Install `uv` if missing.
-2. Sync Python dependencies (`uv sync`).
-3. Guide you through enabling virtual MIDI ports.
-4. Copy `fl_controller/device_FLStudioMCP.py` into
-   `<Documents>\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\`.
-5. Copy the Piano Roll script (`scripts/ComposeWithLLM.pyscript`) into
-   FL Studio's Piano roll scripts folder.
-6. Optionally register the server with Claude Desktop / Claude Code.
+1. Installs `uv` if missing.
+2. Installs the Python dependencies (`uv sync`).
+3. Copies `fl_controller/device_FLStudioMCP.py` into FL Studio's controller
+   folder (`Hardware\FLStudioMCP\`).
+4. Copies `scripts/ComposeWithLLM.pyscript` into FL Studio's
+   **Piano roll scripts** folder.
+5. Registers the server with Claude Desktop / Claude Code.
 
-After the installer, continue at
-[Configure FL Studio MIDI Settings](#configure-fl-studio-midi-settings).
+### 1. Copy the controller script
 
-## Option B - Manual Installation
+The controller script **must live in FL Studio's hardware settings folder**:
 
-### 1. Install the Python dependencies
+```
+Windows: %USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\
+macOS:   ~/Documents/Image-Line/FL Studio/Settings/Hardware/FLStudioMCP/
+```
+
+Copy `fl_controller/device_FLStudioMCP.py` from the repository into that
+folder (create it if missing).
+
+### 1b. Piano roll support (optional but recommended)
+
+The piano-roll tools (`fl_send_notes`, `fl_send_chord`, ...) work through a
+separate FL Studio script that is triggered with a hotkey:
+
+1. Copy `scripts/ComposeWithLLM.pyscript` into:
+   ```
+   Windows: %USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Piano roll scripts\
+   macOS:   ~/Documents/Image-Line/FL Studio/Settings/Piano roll scripts/
+   ```
+2. Press **Update MIDI scripts** (or restart FL Studio).
+3. In FL Studio: **Scripts → Piano roll → ComposeWithLLM** — right-click and
+   assign the keyboard shortcut **Ctrl+Alt+Y** (Cmd+Opt+Y on macOS). `fl_trigger_script`
+   and the piano-roll tools use this keystroke; without it they will warn but
+   still attempt the JSON path.
+
+The `ControlPlane.pyscript` (Ctrl+Alt+M) is the legacy controller —
+`device_FLStudioMCP.py` has replaced it; it exists for backwards
+compatibility only.
+
+### 2. Install Python dependencies
 
 ```bash
-# uv (recommended)
+cd /path/to/FL-MCP
 uv sync
-
-# or pip
-pip install -e .
 ```
 
-### 2. Enable a virtual MIDI port
+(Or `pip install -e .` if you prefer pip.)
 
-The server and FL Studio communicate over a virtual MIDI cable.
+### 3. Point FL Studio at the controller
 
-**Windows - loopMIDI**
+1. Restart FL Studio — or press **Options → Update MIDI scripts** (no restart
+   needed as long as FL Studio was open when you copied the file).
+2. **Options → MIDI Settings**.
+3. In the **Input** list, find your virtual MIDI port (e.g. `FLStudioMCP 1`).
+4. In the **Controller type** dropdown, select `FL Studio MCP Controller`.
+5. Enable the port (click the power icon so it is highlighted; `Send
+   master sync` should be off).
 
-1. Download loopMIDI from https://www.tobias-erichsen.de/software/loopmidi.html
-2. Install and launch it.
-3. Add a new port named `FLStudioMCP` (any name works, but the server
-   prefers ports containing `FLStudioMCP` or `loopMIDI`).
-4. Keep loopMIDI running while using FL Studio.
+When FL Studio starts the script you should see (in **View → Script output**):
 
-**macOS - IAC Driver**
-
-1. Open **Audio MIDI Setup** (Spotlight > "Audio MIDI Setup").
-2. Press Cmd+2 (or Window > Show MIDI Studio).
-3. Double-click **IAC Driver**, tick **Device is online**, press **Apply**.
-
-### 3. Install the FL Studio scripts
-
-**Controller script** (MIDI channel):
-
-```bash
-# Windows (PowerShell editing is optional; plain cmd works too)
-mkdir "%USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP"
-copy fl_controller\device_FLStudioMCP.py "%USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\"
-
-# macOS
-mkdir -p ~/Documents/Image-Line/FL\ Studio/Settings/Hardware/FLStudioMCP
-cp fl_controller/device_FLStudioMCP.py ~/Documents/Image-Line/FL\ Studio/Settings/Hardware/FLStudioMCP/
+```
+FL Studio MCP Controller initialized
+Command file: ...\Settings\Hardware\FLStudioMCP\mcp_command.json
 ```
 
-**Piano Roll script** (hotkey channel):
+### 4. Configure your MCP client
 
-```bash
-# Windows
-copy scripts\ComposeWithLLM.pyscript "%USERPROFILE%\Documents\Image-Line\FL Studio\Settings\Piano roll scripts\"
-
-# macOS
-cp scripts/ComposeWithLLM.pyscript ~/Documents/Image-Line/FL\ Studio/Settings/Piano\ roll\ scripts/
-```
-
-Optionally `scripts/ControlPlane.pyscript` as well (a standalone,
-keystroke-triggered alternative to the MIDI channel; it reads
-`mcp_control_request.json` from the `Settings\Scripts` folder and is
-triggered by the `Ctrl+Alt+M` / `Cmd+Opt+M` hotkey). The installers do
-not copy it.
-
-### 4. Configure FL Studio MIDI Settings
-
-1. **Restart FL Studio** (midi scripts are scanned at startup).
-2. **Options > MIDI Settings** (or press F10 and pick the MIDI tab).
-3. Under **Input**, locate your virtual port:
-   - loopMIDI -> something like `FLStudioMCP 1` (and a loopMIDI entry)
-   - IAC Driver -> `IAC Driver Bus 1`
-4. For the `FLStudioMCP 1` (virtual) port:
-   - Set **Controller type** to **FL Studio MCP Controller**.
-   - Make sure the port is highlighted/enabled.
-5. If you also see a plain `loopMIDI` input entry, leave it at
-   **`(generic controller)`** so it does not fight for the same messages.
-6. Restart FL Studio once more, or hit **Update MIDI scripts** to pick up
-   script changes without a restart.
-
-> Tip: open **View > Script output** - on FL Studio with the controller
-> loaded you should not see load/unload errors. A healthy controller prints
-> nothing on load; errors usually mean a header mismatch (see
-> [TROUBLESHOOTING.md](TROUBLESHOOTING.md)).
-
-### 5. Register the MCP server with a client
-
-**Claude Desktop**
-
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+Add this to your client's MCP config (Claude Desktop: `claude_desktop_config.json`;
+Claude Code: `~/.claude.json` under `mcpServers`):
 
 ```json
 {
   "mcpServers": {
     "fl-studio": {
       "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "D:\\Axioms\\FL-MCP",
-        "fl-studio-mcp"
-      ]
+      "args": ["run", "--directory", "D:\\Axioms\\FL-MCP", "fl-studio-mcp"]
     }
   }
 }
 ```
 
-(Windows paths need escaped backslashes; on macOS/Linux use
-`/path/to/FL-MCP`.)
+- On macOS/Linux use `/path/to/FL-MCP` instead of a Windows path.
+- Any MCP-capable client (Claude, Cursor, VS Code Copilot, etc.) can use the
+  same `command`/`args` pair — just restart the client after editing.
 
-**Claude Code**
+### 5. Verify
 
-```bash
-claude mcp add fl-studio -- uv run --directory /path/to/FL-MCP fl-studio-mcp
-```
-
-**Other MCP clients** (Cursor, Gemini CLI, Codex CLI, ...): the same
-`command` / `args` pair applies; check the client's own MCP configuration
-format. Only Claude Desktop / Claude Code are covered by the installer
-scripts, and only those two are tested.
-
-> Windows note: `uv run` may take a few seconds on first start. Keep the
-> `--directory` argument pointing at the folder that contains
-> `pyproject.toml`.
-
-## Running the server manually
+Run the server manually to confirm it boots:
 
 ```bash
 uv run fl-studio-mcp
-# or, after pip install -e .
-fl-studio-mcp
 ```
 
-The server speaks MCP over stdio - it has no web UI. If you run it in a
-terminal you will see it waiting for JSON-RPC requests from the client.
+Then, in your MCP client, ask something like:
 
-## Smoke test
+> "Connect to FL Studio and show me the current tempo and transport state."
 
-1. Start FL Studio with a project open.
-2. In your MCP client, call `fl_connect` - expect
-   `Successfully connected to FL Studio via MIDI!`.
-3. Call `fl_get_transport_status` - expect `is_playing: false` and a
-   `position` value back.
-4. Call `fl_get_tempo`, `fl_set_tempo(140)` to confirm the MIDI round-trip.
+If that works, the bridge is live. If not, see
+[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
-If 3 or 4 fail, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+## Notes
+
+- The server uses `fl_connect` automatically via the fallback port list; the
+  first successful MIDI port wins. See `src/fl_studio_mcp/utils/midi_connection.py`.
+- The controller script hot-reloads itself every second — editing
+  `device_FLStudioMCP.py` on disk is enough; no `Update MIDI scripts` needed
+  (it re-imports when the version marker changes, see
+  [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)).
+- JSON files `mcp_command.json` / `mcp_response.json` are created inside
+  `Settings/Hardware/FLStudioMCP/` at runtime — that is normal, not trash.

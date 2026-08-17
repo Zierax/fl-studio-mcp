@@ -1,147 +1,87 @@
 # Troubleshooting
 
-Common problems, in rough order of how often they bite.
+The failure modes below are the ones that actually happen. Read the "usual
+cause" first; 90% of the time it is one of these three:
+
+1. **The port is not enabled** in FL Studio MIDI settings,
+2. **The controller type is not selected**,
+3. **FL Studio is not running** while the client calls `fl_connect`.
 
 ---
 
-## 1. "Unknown action" errors
+## Tools time out ("no response", "timeout")
 
-**Symptom:** calling e.g. `fl_set_tempo` returns `Unknown action: ...`,
-or all the new pattern/sequencer tools fail while old ones work.
+The server waits for `mcp_response.json` after triggering MIDI note 127.
 
-**Cause:** FL Studio is running an **old version of the controller script**.
-MIDI scripts are loaded into memory; files copied to the Hardware folder
-are not re-read automatically.
+**Usual causes, in order:**
 
-**Fix:**
+| Check | How | Fix |
+|-------|-----|-----|
+| FL Studio running? | Is the project open? | Start FL Studio. |
+| Port enabled? | **Options → MIDI Settings → Input**: your port must be listed and its power icon highlighted. | Enable the port. |
+| Controller type set? | Same window, `Controller type` column. | Select `FL Studio MCP Controller`. |
+| Wrong port chosen? | `fl_connection_status` shows which port the server is on. | `fl_connect(port_name="FLStudioMCP 1")` — match the exact name. |
+| LoopMIDI running? | loopMIDI must be open with the port created. | Open loopMIDI, create/add the port. |
+| Script errored? | **View → Script output** in FL Studio. | Look for tracebacks; fix and press **Options → Update MIDI scripts**. |
+| Stale response? | `mcp_response.json` may exist from a crash. | Delete it (the server does this per-command anyway). |
 
-1. In FL Studio: **Options > MIDI Settings**.
-2. Click **Update MIDI scripts** (or restart FL Studio entirely, which
-   reloads everything).
-3. Retry the tool call.
+## "Could not open MIDI port" on startup / `fl_connect` fails
 
----
+- loopMIDI port does not exist → create it in loopMIDI.
+- Port name mismatch → pass the exact name: `fl_connect("FLStudioMCP 1")`.
+- Another app (or a stuck server process) already holds the port → close
+  other FL Studio MCP instances and retry.
 
-## 2. "Timeout waiting for FL Studio response"
+## FL Studio does not react to midi tools but transport works
 
-**Symptom:** commands time out after 2-5 s, `mcp_response.json` never
-appears.
+The transport buttons are real MIDI; the rest depends on JSON+MIDI both
+working. If only some tools fail, check the **Script output** pane:
+`Command file: ...` printed at init? If not, the script did not load.
 
-**Possible causes, in order:**
+## Changes to the controller script are ignored
 
-1. **The controller is not loaded** - FL Studio did not load
-   `device_FLStudioMCP.py`.
-   - Check **View > Script output**: a failing header shows load/unload
-     errors.
-   - The file must sit in
-     `<Documents>\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\`
-     and its header must match:
-     `# name=FL Studio MCP Controller` / `# supportedDevices=FLStudioMCP`.
-   - Use **Update MIDI scripts** or restart FL Studio after changing it.
-2. **The MIDI port is misconfigured.**
-   - The server opens an **output** port whose name contains `FLStudioMCP`
-     (fallback `loopMIDI`, then any port).
-   - FL Studio needs an **Input** port enabled and set to controller type
-     **FL Studio MCP Controller**, port enabled (highlighted).
-   - If both `FLStudioMCP 1` and a plain `loopMIDI` input appear, leave the
-     plain `loopMIDI` entry as `(generic controller)`.
-3. **loopMIDI is not running** (Windows) / **IAC Driver disabled** (macOS).
-4. **Two controller scripts racing**: an old copy of the script elsewhere
-   in the Hardware folder with the same device name.
+The script hot-reloads only when the version marker changed:
 
-**Diagnosis steps:**
+```
+MCP_VERSION = 1
+```
 
-- `fl_connection_status()` - shows `port_name` and `available_ports`.
-- In loopMIDI: enable **"Log incoming"** / monitor and confirm the trigger
-  note (note 127) arrives after a tool call.
-- In FL Studio **Script output**: a healthy controller receives `OnMidiMsg`
-  with note 127 (the script's `OnInit` prints a single startup line).
+If you edit the file but reuse the same version number, FL Studio keeps the
+old code. Bump `MCP_VERSION`, then just trigger any command (or wait a
+second) — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
----
+## Notes trigger but nothing audible / no state change
 
-## 3. Controller loads and immediately unloads (load -> unload loops)
+- Live trigger notes (`fl_trigger_note`) are **not persisted** — they only
+  preview. Use step-sequencer or piano-roll tools for written music.
+- The channel may be muted, or routed nowhere. Check
+  `fl_get_channel_info(index)`.
 
-**Cause:** device-name mismatch. FL Studio matches the folder/device name
-against `# supportedDevices` in the script header, and to the controller
-selection in MIDI Settings.
+## Values come back as `None` or empty
 
-**Fixes:**
+- The function may not exist in your FL Studio version (API grew over time) —
+  use `fl_api_list_functions(module, prefix)` to check what's available.
+- Some FL API functions return nothing by design when audio isn't rendering.
 
-- The Hardware subfolder is `FLStudioMCP` and the header must say
-  `# supportedDevices=FLStudioMCP` (exactly, no extra spaces).
-- In MIDI Settings the controller type selected for the port must be
-  **FL Studio MCP Controller** (the `# name=` value).
-- A script whose header is unparsable (e.g. non-ASCII characters in the
-  `# name=` line) gets rejected silently - keep headers ASCII.
+## Python version errors
 
----
+- Ensure Python ≥ 3.10; `pyproject.toml` requires it.
+- If `uv` fails to resolve, run `uv sync` with network access once.
 
-## 4. "No MIDI output ports found" / `fl_connection_status` shows no ports
+## macOS specifics
 
-- **Windows:** install and run loopMIDI; create at least one port.
-- **macOS:** enable the IAC Driver - Audio MIDI Setup > IAC Driver >
-  "Device is online".
-- If ports exist but the server picks a wrong one, name them so they
-  contain `FLStudioMCP` - the server prefers that token.
+- IAC Driver must be **online**: Audio MIDI Setup → IAC Driver → checkbox.
+- Permissions: the terminal hosting the server may need microphone/input
+  permissions granted once.
 
----
+## Still stuck?
 
-## 5. Piano Roll script not triggering
+Use these probes to figure out where it breaks:
 
-1. First time only: run **Tools > Scripting > ComposeWithLLM** once in FL
-   Studio so FL Studio registers the script and its hotkey.
-2. **macOS:** grant Accessibility permissions when prompted.
-3. **Windows:** the server foregrounds the FL Studio window before pressing
-   `Ctrl+Alt+Y`. If FL Studio is minimized to the system tray or not
-   running, the trigger cannot find the window and returns a warning -
-   press the hotkey manually instead.
-4. Confirm the hotkey is actually bound: the script declares its trigger
-   in its docstring (`Trigger: Cmd+Opt+Y / Ctrl+Alt+Y`); make sure the
-   script is listed under FL Studio's **Tools > Scripting** menu and that
-   no other script claims the same hotkey. Press `Ctrl+Alt+Y` yourself and
-   watch **Script output**.
-5. After updating any server code, **fully restart the MCP client**
-   (Claude Desktop/Code). Reconnecting the MCP server alone does NOT
-   respawn the underlying process - it keeps running stale code.
-
----
-
-## 6. Stale code after pulling/editing the repo
-
-The MCP client spawns the server process once. After `git pull` or edits:
-
-1. Stop/restart the MCP client, or kill the `fl-studio-mcp` process.
-2. Restart FL Studio (controller script).
-3. Then retest.
-
----
-
-## 7. FL Studio pops to the foreground on Windows piano-roll calls
-
-Expected: the trigger path needs FL Studio focused to deliver the hotkey.
-If you find it disruptive, set `auto_trigger=False` on the piano-roll tools
-and trigger manually with `fl_trigger_script()` or the hotkey.
-
----
-
-## 8. Errors that are actually FL Studio API limits
-
-| Error / behavior                      | Reality                                        |
-|---------------------------------------|------------------------------------------------|
-| "Cannot load a plugin"                | API has no `loadPlugin`; add instruments by hand or via the plugin picker. |
-| "Cannot create a channel"             | No `createChannel` in the controller API.     |
-| "Cannot place clips on the playlist"  | Playlist API is track-level only.              |
-| `fl_trigger_note` notes disappear     | Real-time only; record, or use step sequencer / piano-roll tools. |
-
----
-
-## Appendix - Debug checklist (fastest first)
-
-| Step                              | Tool / place                              |
-|-----------------------------------|-------------------------------------------|
-| Is loopMIDI/IAC running?          | Task Manager / Audio MIDI Setup           |
-| Are MIDI ports visible?           | `fl_connection_status()`                  |
-| Is the controller loaded?         | FL Studio MIDI Settings, Script output    |
-| Does the trigger note arrive?     | loopMIDI logging                          |
-| Does the response file appear?    | `mcp_response.json` in Hardware\FLStudioMCP |
-| Restart both sides               | FL Studio + MCP client                    |
+1. `fl_connection_status` → is the server connected?
+2. `fl_general_info` → does the bridge round-trip?
+3. `fl_api_list_functions("channels", "get")` → does raw access work?
+4. Check `Script output` in FL Studio for the controller's prints/errors.
+5. Manual test: run `uv run fl-studio-mcp` and watch the command files
+   `mcp_command.json` / `mcp_response.json` appear and update in
+   `Settings/Hardware/FLStudioMCP/`.

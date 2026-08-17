@@ -1,57 +1,40 @@
-# Project Mentions and Backbone Credit
+# Credits
 
-This project extends and builds upon work done by the original
-[**karl-andres/fl-studio-mcp**](https://github.com/karl-andres/fl-studio-mcp)
-repository, which served as the backbone (base codebase and architecture) for
-this fork/derivative work.
+FL Studio MCP v1.0.0 is built on the work of several open projects.
 
-## Backbone Project
+## Backbone
 
-| Attribute   | Value                                                        |
-|-------------|--------------------------------------------------------------|
-| Repository  | https://github.com/karl-andres/fl-studio-mcp                 |
-| Role        | Backbone codebase - architecture, MIDI + JSON transport, piano-roll integration, and the original tool set |
-| License     | MIT                                                          |
+- **[karl-andres/fl-studio-mcp](https://github.com/karl-andres/fl-studio-mcp)**
+  — the original "control FL Studio via JSON + MIDI trigger" idea which this
+  project started from. The command-file/response-file round trip and the
+  high-level tool layout follow that architecture.
 
-The original project itself drew on:
+## Piano roll integration
 
-- [calvinw/fl-studio-mcp](https://github.com/calvinw/fl-studio-mcp) - the
-  Piano Roll integration approach (JSON files + keystroke triggering).
+- **[calvinw/fl-studio-mcp](https://github.com/calvinw/fl-studio-mcp)** —
+  the pattern of a hotkey-triggered script (Ctrl+Alt+Y) that reads note
+  requests from JSON and writes them into the piano roll. The `fl_send_notes`
+  / `fl_send_chord` tools inherit from this approach.
 
-## What We Keep From the Backbone
+## Reference
 
-- The hybrid **MIDI + JSON** communication architecture (command file,
-  trigger note, controller script, response file).
-- The **Piano Roll** (ComposeWithLLM / ControlPlane) scripting approach.
-- The overall `scripts/`, `fl_controller/`, and `src/fl_studio_mcp/`
-  repository layout and the original connection/tool modules.
+- **[IL-Group/FL-Studio-API-Stubs](https://github.com/IL-Group/FL-Studio-API-Stubs)**
+  — the authoritative stub files for FL Studio's Python scripting API; the
+  basis for the raw module surface (`fl_raw_command`) and for the docs.
 
-## What Was Added / Changed In This Project
+## Frameworks
 
-- **Reworked the transport layer** - the keystroke-based DAW-control path
-  (ControlPlane) is no longer used by the MCP server; all transport, mixer,
-  channel, plugin, pattern, and step-sequencer actions now run through the
-  MIDI controller script (`FLStudioMCP`).
-- **Status, pattern, and step-sequencer capabilities were added:**
-  - Pattern lifecycle: create / list / select / rename / clone / clear /
-    set length (see `src/fl_studio_mcp/tools/patterns.py`).
-  - Step-sequencer composition: per-step pitch, velocity, and pan on any
-    channel, enabling melodies through the step sequencer
-    (see `src/fl_studio_mcp/tools/sequencer.py`).
-  - Tempo control and shuffle readback
-    (see `src/fl_studio_mcp/tools/transport.py`).
-  - Channel type introspection and coarse pitch control
-    (see `src/fl_studio_mcp/tools/channels.py`).
-- **Documentation overhaul** - a full `docs/` reference and a rewritten
-  README.
+- **[FastMCP](https://github.com/jlowin/fastmcp)** — MCP server framework.
+- **[mido](https://github.com/mido/mido)** — MIDI port handling.
 
-## Third-Party Libraries
+## FL Studio itself
 
-| Library | Purpose                                      |
-|---------|----------------------------------------------|
-| FastMCP | MCP server framework                         |
-| mido    | MIDI message handling (Python)               |
-| python-rtmidi | MIDI port backend for mido             |
-| pynput  | Keystroke triggering for the Piano Roll path |
+FL Studio's built-in **MIDI controller scripting API** is the single point of
+integration — everything the server does funnels through it. That API and the
+DAW are property of [Image-Line](https://www.image-line.com).
 
-See the [README credits](../README.md#credits) for the full list.
+## License note
+
+This project is MIT-licensed (see [LICENSE](../LICENSE)). The sample packs
+mentioned in development logs are third-party and not part of this
+repository.

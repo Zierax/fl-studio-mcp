@@ -1,88 +1,67 @@
 # Limitations
 
-What the FL Studio scripting API does and does not allow, and how this
-project works around it. Read this before planning a workflow that depends
-on one of these.
+This is the honest list of what FL Studio's scripting API allows — and
+crucially, what it does **not**. Read it once, and you will not waste prompts
+on things the server can never do.
 
-TL;DR: you can control and compose on anything that already exists in the
-project, but you cannot *create* instruments, and you cannot arrange the
-playlist timeline programmatically.
+## Cannot do (by design of the FL API — no workaround exists)
 
----
+### Create channels or load audio files
 
-## 1. Cannot load new plugins
+There is no FL API function to:
 
-FL Studio's MIDI/Python scripting API does **not** provide
-`plugins.loadPlugin` (or a channel-rack "add instrument" call). This means:
+- add a new channel to the channel rack,
+- load a sample / audio file into a channel,
+- instantiate a plugin.
 
-- The MCP server can never add a new VST/AU instrument to your project.
-- Every instrument must be added once, by hand (or via sample drag-in) in
-  the channel rack before the session starts.
+The server can only control channels that **already exist** in the open
+project. Loading an acapella: open the **browser**, click the file, drag it
+into the rack/playlist manually — the server will then happily program and
+mix that channel.
 
-**Workaround:** add the instrument once, save the project, and the server
-can then control its parameters
-(`fl_get_plugin_params`, `fl_set_plugin_param_value`), switch presets, and
-program notes on it (step sequencer / piano roll).
+### Place clips on the playlist timeline
 
-## 2. Cannot create channels
+`playlist` API functions cover track names, colors, mute/solo and state
+reads. There is no call to drop a pattern clip or audio clip onto the
+timeline. Pattern *management* (create/select/rename/clone/clear) is fully
+automated; **arranging** is a manual step in FL Studio.
 
-There is no `channels.createChannel` equivalent. New sampler/synth
-channels cannot be spawned from the API.
+### Load or instantiate plugins
 
-**Workaround:** preload channels in the project template; then the server
-can name, route, pitch, mute, solo, and program them.
+Plugins already present in the project can be fully controlled (params,
+presets, colors) — but nothing can be added. Also, some 3rd-party VSTs don't
+report parameter names; `fl_get_plugin_params` will return indices/values,
+and `fl_plugin_param_name_to_index` is your friend.
 
-## 3. Cannot place clips on the playlist
+### Persist live note triggers
 
-The playlist API is **track-level only**. There is no API to drop a clip
-onto the timeline at a position with a length.
+`fl_trigger_note` plays audio through the channel as a preview. Unless FL
+recording is active, this is **not** written into the pattern — consistent
+with FL's own behavior. For written music, use the step sequencer or piano
+roll tools.
 
-**Workaround:** arrange patterns in the playlist manually. The server can
-create/rename/select/clear patterns (which then appear in the playlist
-panel), control mixer tracks, and set loop mode - but the actual timeline
-placement is a manual step.
+### Read audio waveform / render the mix
 
-## 4. Real-time note triggering is not persistent
+The API is control-plane only. There is no "get audio samples" or "render to
+file" call. (For arranging + rendering, use FL Studio's own export.)
 
-`fl_trigger_note` sends MIDI notes in real time. They will **not** appear
-in the pattern unless FL Studio is recording at that moment.
+## Partial / version-dependent
 
-**To make persistent music you have three supported paths:**
+| Area | Reality |
+|------|---------|
+| API surface | FL's Python API has grown over versions; some functions exist only in newer builds. Use `fl_api_list_functions` to discover what *your* FL Studio exposes. |
+| Plugin params | Names, ranges, and units are plugin-provided; not all plugins cooperate. |
+| UI automation | `ui.*` functions (focus forms, browser navigation, popup menus) exist and are exposed via raw access, but they depend on the window being open (e.g. browser must be visible and focused). |
+| Preview = state change | Some `ui.*`/transport functions mutate FL's visible state — the server always reads back and returns the authoritative value. |
 
-| Path | Tool(s) | Persists? | Best for |
-|------|---------|-----------|----------|
-| Step sequencer on/off | `fl_set_grid_bit`, `fl_set_step_sequence` | Yes | Drum patterns |
-| Step sequencer with pitch/velocity/pan | `fl_set_channel_steps` | Yes | Melodies, grooves, per-step programming |
-| Piano roll | `fl_send_notes`, `fl_send_chord` | Yes | Long notes, chords, melodies with durations |
+## Performance & safety
 
-## 5. Piano roll requires the scripting hotkey
-
-Piano-roll edits go through the ComposeWithLLM script triggered by a global
-hotkey. On Windows the FL Studio window must be foregroundable, so:
-
-- FL Studio briefly takes focus per piano-roll call.
-- If the window cannot be found, the trigger fails and you must press the
-  hotkey manually (or call `fl_trigger_script`).
-
-## 6. Controller script must be manually updated
-
-FL Studio caches MIDI controller scripts in memory. After changing
-`device_FLStudioMCP.py`, you must click **Update MIDI scripts** in MIDI
-Settings (or restart FL Studio). The MCP server cannot reload it for you.
-
-## 7. Platform parity
-
-| Feature                | Windows | macOS |
-|------------------------|---------|-------|
-| MIDI + JSON channel    | loopMIDI required | IAC Driver |
-| Piano-roll auto-trigger | Yes (foregrounds FL Studio) | Yes (osascript/pynput) |
-| Linux                  | Not officially supported by FL Studio; MIDI channel falls back to `~/.fl-studio/Settings` | - |
-
-## 8. Timing / latency
-
-- Each MIDI command waits up to 2-5 s for the controller's response
-  (50 ms polling). Rapid-fire automation (e.g. per-frame parameter sweeps)
-  is not practical - plan for music-event-rate calls, not audio-rate
-  automation.
-- Piano-roll calls block for ~2 s (the `TRIGGER_DELAY`) after sending the
-  hotkey, so the script has time to run.
+- One JSON round-trip per call; each takes a few ms inside FL Studio. Batch
+  heavy work (e.g. whole patterns) into single calls rather than many small
+  ones.
+- The controller executes commands synchronously in FL's script thread — do
+  not run thousands of calls in a tight loop while playback is active.
+- Undo: the server can save/restore undo points (`fl_save_undo`, `fl_undo`),
+  but FL's undo count/stack depends on its own "undoable" model — big
+  scripted edits may coalesce. Save the project (Ctrl+S) before risky
+  experiments, or snapshot with `fl_project_snapshot`.

@@ -1,6 +1,8 @@
 """FL Studio MCP tools."""
 
+from fl_studio_mcp.tools.advanced import register_advanced_tools
 from fl_studio_mcp.tools.channels import register_channel_tools
+from fl_studio_mcp.tools.fullcontrol import register_fullcontrol_tools
 from fl_studio_mcp.tools.mixer import register_mixer_tools
 from fl_studio_mcp.tools.patterns import register_pattern_tools
 from fl_studio_mcp.tools.piano_roll import register_piano_roll_tools
@@ -16,4 +18,6 @@ __all__ = [
     "register_pattern_tools",
     "register_sequencer_tools",
     "register_piano_roll_tools",
+    "register_advanced_tools",
+    "register_fullcontrol_tools",
 ]

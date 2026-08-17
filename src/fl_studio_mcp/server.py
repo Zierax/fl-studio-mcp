@@ -21,7 +21,9 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from fl_studio_mcp.tools import (
+    register_advanced_tools,
     register_channel_tools,
+    register_fullcontrol_tools,
     register_mixer_tools,
     register_pattern_tools,
     register_piano_roll_tools,
@@ -47,6 +49,17 @@ Available tool categories:
 - Patterns: Create, list, select, rename, clone, clear, set length
 - Step Sequencer: Program melodies with per-step pitch/velocity/pan
 - Plugins: Parameter control, preset navigation (cannot load new plugins)
+- Advanced: Raw FL API passthrough (fl_raw_command), automation events,
+  mixer routing/sends, built-in EQ, metering, FX chains, swing
+  (shuffle), step parameters, playlist control, global actions
+  (save/undo/play/snap), tempo via the real API, project info
+- Full Control: fl_raw_action reaches the ENTIRE 240+ command surface
+  (mixer/channels/transport/patterns/playlist/general/ui/arrangement/
+  device/plugins), fl_api_surface self-discovers the exact API of this FL
+  build, plugin param maps and presets, mixer track full state, channel
+  full state, time signature, undo manager, UI windows, arrangement
+  markers/selection, device (hardware) state and MIDI out, global events
+  (REC_Tempo, REC_MainVol, REC_MainShuffle, ...)
 
 Important limitations:
 1. Cannot load new VST/AU plugins - only control existing ones
@@ -54,6 +67,11 @@ Important limitations:
 3. Note triggering (fl_trigger_note) is real-time only - notes won't persist
    unless FL Studio is recording. Use step sequencer (fl_set_grid_bit,
    fl_set_channel_steps) for persistent patterns.
+4. Use fl_api_surface + fl_api_list_functions before raw calls - this FL
+   build (api_version 40) differs from modern FL25 docs (e.g. EQ args are
+   reversed (track, band), 3 bands only, no shuffle getters, swing via
+   channels.event swing_mix, tempo EPB = BPM*1000, no arrangement time
+   helpers).
 """,
 )
 
@@ -146,6 +164,8 @@ register_plugin_tools(mcp)
 register_pattern_tools(mcp)
 register_sequencer_tools(mcp)
 register_piano_roll_tools(mcp)
+register_advanced_tools(mcp)
+register_fullcontrol_tools(mcp)
 
 
 def main():

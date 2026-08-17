@@ -1,93 +1,118 @@
 # Development
 
-Guide for working on the FL Studio MCP server itself.
+Working on this repo: adding tools, testing against FL Studio, and releasing.
 
-## Prerequisites
+## Layout reminder
 
-- Python 3.10+ (project targets 3.10+; 3.12 is the tested install on
-  Windows because of `python-rtmidi` wheels)
-- `uv` (recommended): https://github.com/astral-sh/uv
-- FL Studio with a working setup if you want to test against the real DAW
+```
+fl_controller/device_FLStudioMCP.py   ← runs INSIDE FL Studio (the "remote")
+src/fl_studio_mcp/tools/*.py          ← one file per tool group (the "client")
+src/fl_studio_mcp/utils/              ← MIDI + JSON bridge
+src/fl_studio_mcp/server.py           ← MCP entry point
+```
 
-## Setup
+The interesting rule: **tools are thin wrappers**. The real work happens in
+the controller script, which executes FL Studio's own API.
+
+## Adding a new tool (typical case)
+
+Suppose you want `fl_get_last_peak(channel)`.
+
+### 1. Confirm the API can do it
+
+```python
+# any assistant or script:
+fl_api_list_functions("channels", "get")   # lists every get* function
+fl_raw_command("channels", "getLastPeak", [0])
+```
+
+If `fl_raw_command` already returns what you want, skip to step 3.
+
+### 2. Add a handler in the controller first
+
+In `fl_controller/device_FLStudioMCP.py`:
+
+```python
+elif action == "channels.getLastPeak":
+    return channels.getLastPeak(int(params.get("channel", 0)))
+```
+
+Copy the file to FL's `Settings/Hardware/FLStudioMCP/` — **and bump the
+version marker** so FL Studio reloads it:
+
+```python
+MCP_VERSION = 2   # was 1
+```
+
+No restart needed; the script hot-reloads on its 1-second idle tick.
+
+### 3. Register the client-side tool
+
+In `src/fl_studio_mcp/tools/channels.py` (or wherever it belongs):
+
+```python
+@mcp.tool()
+def fl_get_last_peak(channel: int) -> float:
+    """Peak level readback for a channel."""
+    result = conn.send_command("channels.getLastPeak", {"channel": channel})
+    return result.get("value", 0.0)
+```
+
+Make sure the `register_*_tools(mcp, conn)` function includes it, then `uv
+sync && uv run fl-studio-mcp` to smoke-test.
+
+## Testing against a live FL Studio
+
+There is no meaningful unit test without the DAW; the project's test flow is:
+
+1. Open a scratch project in FL Studio (or use your working one).
+2. Connect (`fl_connect`), then exercise the new tool.
+3. Watch `Script output` in FL Studio for controller errors.
+4. If the controller script changed, verify the reload printout:
+   `[MCP] hot-reloaded to version N`.
+
+## Versioning & releases
+
+The project uses **semantic versioning with a single v-prefixed tag**.
+Examples: `v1`, `v1.1`, `v2` — and no 10/11-style ad-hoc numbers anywhere.
+
+Three version numbers exist; keep them in sync:
+
+| Where | What it is |
+|-------|------------|
+| `fl_controller/device_FLStudioMCP.py` → `MCP_VERSION` | The hot-reload marker. **Must change on every controller edit.** Use the same number as the tag (`1`, `1.1`, ...). |
+| `pyproject.toml` → `version` | The Python package version (`1.0.0`). |
+| Git tag | The release, e.g. `v1`. |
+
+Release checklist:
 
 ```bash
-# install dependencies incl. dev extras
-uv sync --dev
-
-# or pip
-pip install -e ".[dev]"
+# 1. bump MCP_VERSION in device_FLStudioMCP.py + version in pyproject.toml
+# 2. update docs if the tool surface changed (docs/TOOLS.md!)
+uv sync                       # keep the lockfile fresh
+uv run fl-studio-mcp          # boots? then:
+git add -A && git commit -m "release: v1"
+git tag v1                    # tag the release
+git push origin master --tags # then publish a GitHub release from the tag
 ```
 
-## Commands
+Notes:
 
-| Command | Purpose |
-|---------|---------|
-| `uv run fl-studio-mcp` | Run the MCP server (stdio) |
-| `uv run ruff check .` | Lint (E, F, I, W rules, 100 col) |
-| `uv run ruff check --fix .` | Lint + autofix |
-| `uv run pytest` | Run tests |
+- **Never skip the `MCP_VERSION` bump** — stale controllers silently run old
+  code and the symptoms look like "FL ignores everything".
+- Keep `docs/TOOLS.md` accurate; it is the contract users rely on.
+- Personal/dev scratch scripts do **not** belong in this repo — keep them
+  outside (e.g. a `FL-MCP-DEV` folder) so the release stays clean.
 
-## Repository layout
+## Coding style
 
-```
-fl_controller/            FL Studio MIDI controller script (runs inside FL Studio)
-scripts/                  FL Studio .pyscript files + installer helpers
-src/fl_studio_mcp/        MCP server package
-  server.py               FastMCP entry point, connection + resources
-  tools/                  one module per tool category
-  utils/                  transport plumbing (MIDI, trigger)
-docs/                     documentation set
-```
-
-## Adding a new tool
-
-1. **Controller side** (`fl_controller/device_FLStudioMCP.py`): add a
-   `category.verb` handler in the action dispatch table, i.e. a function
-   that uses the `midi` module (e.g. `patterns.patternCount`) and writes
-   the result dict into the response.
-   - Keep the header lines unchanged (`# name=...`, `# supportedDevices=...`).
-   - Do not use `print()`; the script's output goes to FL Studio's Script
-     output, not to the MCP server. Debug via the response JSON or an
-     optional log file.
-2. **Server side** (`src/fl_studio_mcp/tools/<category>.py`): add an
-   `@mcp.tool()` function that calls
-   `conn.send_command("category.verb", {...})` and unwraps the response
-   into a friendly return value.
-3. `ruff check` and `ruff check --fix`; ensure the controller file at least
-   parses as Python 3 (it is Python 3 inside FL Studio).
-4. Sync the controller to FL Studio:
-   `<Documents>\Image-Line\FL Studio\Settings\Hardware\FLStudioMCP\` and
-   **Update MIDI scripts** in MIDI Settings.
-5. Update `docs/TOOLS.md`.
-
-## Testing against the real DAW
-
-There is no mocked API - integration tests require live FL Studio:
-
-1. Start FL Studio, ensure the controller is loaded.
-2. Run the server manually: `uv run fl-studio-mcp` (it blocks on stdio).
-   For quick probing, use a small script that calls
-   `FLConnection.send_command` directly:
-
-   ```python
-   from fl_studio_mcp.utils.connection import get_connection
-
-   conn = get_connection()
-   conn.ensure_connected()
-   print(conn.send_command("transport.getStatus"))
-   print(conn.send_command("patterns.count"))
-   print(conn.send_command("transport.getTempo"))
-   ```
-
-3. After any controller change: **Update MIDI scripts** in FL Studio, or
-   restart it (scripts in memory are stale otherwise).
-
-## Style
-
-- ruff, rules E/F/I/W, line length 100, target py310.
-- Type hints everywhere (`| None` unions are fine on 3.10+).
-- Tool docstrings describe args and return values - they are surfaced to
-  the LLM by MCP, so keep them precise.
-- ASCII-only comments/strings in `fl_controller/` (FL Studio's Python
-  parser has historically been picky about encoding in script headers).
+- `ruff` is configured in `pyproject.toml` (line-length 100):
+  ```bash
+  uv run ruff check src/ fl_controller/device_FLStudioMCP.py
+  ```
+- The controller script runs inside a sandboxed Python (FL Studio's) — keep
+  it to stdlib + FL modules only. No external pip deps in
+  `fl_controller/`.
+- All client tools return JSON-safe types (dicts, lists, floats, strings).
+- User-facing tool descriptions should state units (0.0–1.0, 0-based index)
+  so models don't guess.
