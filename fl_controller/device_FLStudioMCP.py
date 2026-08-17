@@ -1,7 +1,7 @@
 # name=FL Studio MCP Controller
 # supportedDevices=FLStudioMCP
 
-MCP_VERSION = 1
+MCP_VERSION = 2
 
 """
 FL Studio MIDI Controller Script for MCP Integration.
@@ -509,20 +509,27 @@ def handle_transport_set_playback_speed(params: dict) -> dict:
 
 
 def handle_transport_get_tempo() -> dict:
-    """Get current tempo in BPM."""
+    """Get current tempo in BPM (this build returns raw EPB = BPM * 1000)."""
     try:
         tempo = mixer.getCurrentTempo()
-        return {"tempo": tempo}
+        val = float(tempo)
+        if val > 1000.0:
+            val = val / 1000.0
+        return {"tempo": val}
     except Exception as e:
         return {"error": f"Failed to get tempo: {e}"}
 
 
 def handle_transport_set_tempo(params: dict) -> dict:
-    """Set tempo in BPM."""
+    """Set tempo in BPM (raw EPB = BPM * 1000)."""
     tempo = params.get("tempo", params.get("bpm", 120.0))
     try:
-        mixer.setCurrentTempo(float(tempo))
-        return {"tempo": mixer.getCurrentTempo()}
+        mixer.setCurrentTempo(int(float(tempo) * 1000))
+        back = mixer.getCurrentTempo()
+        val = float(back)
+        if val > 1000.0:
+            val = val / 1000.0
+        return {"tempo": val}
     except Exception as e:
         return {"error": f"Failed to set tempo: {e}"}
 

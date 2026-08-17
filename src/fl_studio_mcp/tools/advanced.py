@@ -45,7 +45,7 @@ def register_advanced_tools(mcp: FastMCP) -> None:
         if not result.get("success", False) and "error" in result:
             return {"error": result["error"]}
         return {
-            "result": result.get("result"),
+            "result": result.get("value"),
             "error": result.get("error"),
             "meta": result.get("meta"),
         }

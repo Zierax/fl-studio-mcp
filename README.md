@@ -18,7 +18,7 @@ project bridges the gap:
 MCP client (Claude, Cursor, ...)
         │  stdio (JSON-RPC)
         ▼
-   FastMCP server (Python)          ── the 100+ tools
+   FastMCP server (Python)          ── the 165 tools
         │  writes mcp_command.json + triggers MIDI note 127
         ▼
    FL Studio controller script      ── runs INSIDE FL Studio,

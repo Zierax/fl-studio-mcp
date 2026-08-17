@@ -9,7 +9,7 @@ the gap with a two-process design.
 ```
 +-------------+   stdio (JSON-RPC)   +--------------------+   files + MIDI   +-----------------------+
 | MCP client  | <------------------> | FastMCP server     |  mcp_command.json   | FL Studio          |
-| (Claude,    |                       | (Python, the 100+ |  + note 127         | controller script  |
+| (Claude,    |                       | (Python, the 165 |  + note 127         | controller script  |
 |  Cursor,    |                       |  tools)            | -----------------> | device_FLStudioMCP |
 |  ...)       |                       |                    |  mcp_response.json  | (runs in FL Studio)|
 +-------------+                       +--------------------+ <----------------- +-----------------------+
