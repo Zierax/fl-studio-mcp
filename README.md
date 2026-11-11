@@ -1,4 +1,4 @@
-﻿# FL Studio MCP
+# FL Studio MCP
 
 An [MCP](https://modelcontextprotocol.io) server that lets AI assistants
 **control FL Studio fully** — transport, mixer, channel rack, plugins,
@@ -6,6 +6,8 @@ patterns, step sequencer, piano roll, and the entire FL scripting API —
 over a virtual MIDI trigger + JSON command channel.
 
 > **Version 1.1.1** · MIT License · © 2026 Ziad Salah (Zierax)
+
+[![Listed on MCP Market](https://mcpmarket.com/badge/server/fl-studio-3.svg)](https://mcpmarket.com/server/fl-studio-3?utm_source=readme&utm_medium=badge)
 
 ---
 
