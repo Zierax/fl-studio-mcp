@@ -1,0 +1,21 @@
+# Normalise line endings inside the repository.
+#
+# Historically the working tree was checked out with CRLF on Windows while the
+# repository stored LF, which produced whole-file diffs for every touched file
+# and broke the POSIX shell installers (`/bin/bash^M`). Everything is stored as
+# LF in the repository and checked out as LF, except Windows-native scripts.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF so they behave correctly in cmd/PowerShell.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets are never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.flp binary
