@@ -1,7 +1,7 @@
 # name=FL Studio MCP Controller
 # supportedDevices=FLStudioMCP
 
-MCP_VERSION = 2
+MCP_VERSION = 3
 
 """
 FL Studio MIDI Controller Script for MCP Integration.
@@ -17,12 +17,27 @@ Communication flow:
 4. Script reads command JSON, executes FL Studio API
 5. Script writes response to mcp_response.json
 6. MCP server reads response
+
+Compatibility with FL Studio's embedded Python
+----------------------------------------------
+FL Studio does not ship a normal Python installation: it embeds a *stripped*
+CPython interpreter whose standard library is almost entirely removed.  On
+FL Studio 21 the bundled ``Shared/Python/Lib`` folder only contains
+``midi.py`` and ``utils.py``, so ``import json`` -- and ``os``, ``pathlib``,
+``importlib``, ``builtins`` and friends -- fail with
+``ModuleNotFoundError`` and the controller never finishes initialising.
+
+Everything this script needs is therefore implemented with builtins only:
+
+* a self-contained JSON codec (``_json_dumps`` / ``_json_loads``),
+* string based path helpers instead of ``os.path`` / ``pathlib``,
+* ``__import__`` based module probing instead of ``importlib``.
+
+The only modules imported are ``sys`` (always built into the interpreter),
+``time`` (built into the interpreter as well) and the FL Studio API modules.
 """
 
-import json
-import os
 import sys
-from pathlib import Path
 
 # FL Studio API modules (available when running inside FL Studio)
 import channels
@@ -60,51 +75,527 @@ try:
 except ImportError:  # pragma: no cover
     midi = None
 
+try:
+    import device
+except ImportError:  # pragma: no cover
+    device = None
 
-def _get_script_dir() -> Path:
-    """Get the script directory path.
+try:
+    import time as _time
+except ImportError:  # pragma: no cover - `time` is built into FL's interpreter
+    _time = None
 
-    FL Studio's Python environment doesn't support __file__, so we construct
-    the path based on the platform's standard FL Studio settings location.
-    """
-    if sys.platform == "darwin":
-        # macOS
-        base = Path.home() / "Documents" / "Image-Line" / "FL Studio" / "Settings"
-    elif sys.platform == "win32":
-        # Windows
-        userprofile = os.environ.get("USERPROFILE", "~")
-        base = Path(userprofile) / "Documents" / "Image-Line" / "FL Studio" / "Settings"
+
+# =============================================================================
+# SELF-CONTAINED JSON CODEC
+#
+# Replaces the `json` standard library module, which FL Studio does not
+# ship.  The output is byte compatible with `json.dumps(..., indent=2)`:
+# strings are escaped to pure ASCII (so the file can be read back with any
+# locale encoding), floats use `repr()`, and non-finite floats use the
+# `NaN` / `Infinity` / `-Infinity` literals that Python's json accepts.
+# =============================================================================
+
+_JSON_ESCAPE_MAP = {
+    '"': '\\"',
+    "\\": "\\\\",
+    "\b": "\\b",
+    "\f": "\\f",
+    "\n": "\\n",
+    "\r": "\\r",
+    "\t": "\\t",
+}
+
+_JSON_UNESCAPE_MAP = {
+    '"': '"',
+    "\\": "\\",
+    "/": "/",
+    "b": "\b",
+    "f": "\f",
+    "n": "\n",
+    "r": "\r",
+    "t": "\t",
+}
+
+
+def _json_escape(value):
+    """Return *value* as an ASCII-only JSON string literal."""
+    chunks = ['"']
+    for char in value:
+        escaped = _JSON_ESCAPE_MAP.get(char)
+        if escaped is not None:
+            chunks.append(escaped)
+            continue
+        code = ord(char)
+        if 0x20 <= code <= 0x7E:
+            chunks.append(char)
+        elif code > 0xFFFF:
+            # Non-BMP code point -> encode as a UTF-16 surrogate pair.
+            code -= 0x10000
+            chunks.append("\\u%04x\\u%04x" % (0xD800 + (code >> 10), 0xDC00 + (code & 0x3FF)))
+        else:
+            chunks.append("\\u%04x" % code)
+    chunks.append('"')
+    return "".join(chunks)
+
+
+def _json_key(key):
+    """Convert a mapping key into its JSON string form."""
+    if isinstance(key, str):
+        return key
+    if key is True:
+        return "true"
+    if key is False:
+        return "false"
+    if key is None:
+        return "null"
+    return str(key)
+
+
+def _json_number(value):
+    """Format a float the way Python's json module does."""
+    if value != value:  # NaN
+        return "NaN"
+    if value == float("inf"):
+        return "Infinity"
+    if value == float("-inf"):
+        return "-Infinity"
+    return repr(value)
+
+
+def _json_write(value, out, indent, level):
+    """Append the JSON representation of *value* to the *out* list."""
+    if value is None:
+        out.append("null")
+    elif value is True:
+        out.append("true")
+    elif value is False:
+        out.append("false")
+    elif isinstance(value, str):
+        out.append(_json_escape(value))
+    elif isinstance(value, int):
+        out.append(str(value))
+    elif isinstance(value, float):
+        out.append(_json_number(value))
+    elif isinstance(value, dict):
+        _json_write_object(value, out, indent, level)
+    elif isinstance(value, (list, tuple)):
+        _json_write_array(value, out, indent, level)
     else:
-        # Linux (unlikely but handle it)
-        base = Path.home() / "Documents" / "Image-Line" / "FL Studio" / "Settings"
-
-    return base / "Hardware" / "FLStudioMCP"
+        # Not a JSON type: mirror `_serialize()` and use its repr.
+        out.append(_json_escape(repr(value)))
 
 
-# File paths for JSON communication
-SCRIPT_DIR = _get_script_dir()
-COMMAND_FILE = SCRIPT_DIR / "mcp_command.json"
-RESPONSE_FILE = SCRIPT_DIR / "mcp_response.json"
+def _json_write_object(value, out, indent, level):
+    """Append a JSON object to the *out* list."""
+    if not value:
+        out.append("{}")
+        return
+    newline = "\n" if indent else ""
+    pad = " " * (indent * (level + 1))
+    closing = " " * (indent * level)
+    out.append("{")
+    first = True
+    for key, item in value.items():
+        if not first:
+            out.append(",")
+        first = False
+        out.append(newline)
+        out.append(pad)
+        out.append(_json_escape(_json_key(key)))
+        out.append(":")
+        if indent:
+            out.append(" ")
+        _json_write(item, out, indent, level + 1)
+    out.append(newline)
+    out.append(closing)
+    out.append("}")
+
+
+def _json_write_array(value, out, indent, level):
+    """Append a JSON array to the *out* list."""
+    if not value:
+        out.append("[]")
+        return
+    newline = "\n" if indent else ""
+    pad = " " * (indent * (level + 1))
+    closing = " " * (indent * level)
+    out.append("[")
+    first = True
+    for item in value:
+        if not first:
+            out.append(",")
+        first = False
+        out.append(newline)
+        out.append(pad)
+        _json_write(item, out, indent, level + 1)
+    out.append(newline)
+    out.append(closing)
+    out.append("]")
+
+
+def _json_dumps(value, indent=2):
+    """Serialise *value* into a JSON document.
+
+    Mirrors ``json.dumps(value, indent=indent)`` but without importing the
+    standard library.
+    """
+    out = []
+    _json_write(value, out, indent, 0)
+    return "".join(out)
+
+
+class _JsonError(ValueError):
+    """Raised when a JSON document cannot be parsed."""
+
+
+class _JsonParser(object):
+    """A small recursive-descent JSON parser."""
+
+    __slots__ = ("_text", "_index", "_length")
+
+    def __init__(self, text):
+        self._text = text
+        self._index = 0
+        self._length = len(text)
+
+    def error(self, message):
+        """Raise a parse error positioned at the current offset."""
+        raise _JsonError("%s: char %d" % (message, self._index))
+
+    def parse(self):
+        """Parse the whole document and return the resulting value."""
+        self._skip_whitespace()
+        value = self._parse_value()
+        self._skip_whitespace()
+        if self._index != self._length:
+            self.error("Extra data")
+        return value
+
+    def _skip_whitespace(self):
+        text = self._text
+        index = self._index
+        length = self._length
+        while index < length and text[index] in " \t\n\r":
+            index += 1
+        self._index = index
+
+    def _parse_value(self):
+        if self._index >= self._length:
+            self.error("Expecting value")
+        char = self._text[self._index]
+        if char == "{":
+            return self._parse_object()
+        if char == "[":
+            return self._parse_array()
+        if char == '"':
+            return self._parse_string()
+        if char == "t":
+            return self._parse_literal("true", True)
+        if char == "f":
+            return self._parse_literal("false", False)
+        if char == "n":
+            return self._parse_literal("null", None)
+        if char == "N":
+            return self._parse_literal("NaN", float("nan"))
+        if char == "I":
+            return self._parse_literal("Infinity", float("inf"))
+        if char == "-" and self._text.startswith("-Infinity", self._index):
+            self._index += len("-Infinity")
+            return float("-inf")
+        return self._parse_number()
+
+    def _parse_literal(self, literal, value):
+        if self._text.startswith(literal, self._index):
+            self._index += len(literal)
+            return value
+        self.error("Expecting value")
+
+    def _parse_object(self):
+        result = {}
+        self._index += 1  # consume '{'
+        self._skip_whitespace()
+        if self._index < self._length and self._text[self._index] == "}":
+            self._index += 1
+            return result
+        while True:
+            self._skip_whitespace()
+            if self._index >= self._length or self._text[self._index] != '"':
+                self.error("Expecting property name enclosed in double quotes")
+            key = self._parse_string()
+            self._skip_whitespace()
+            if self._index >= self._length or self._text[self._index] != ":":
+                self.error("Expecting ':' delimiter")
+            self._index += 1
+            self._skip_whitespace()
+            result[key] = self._parse_value()
+            self._skip_whitespace()
+            if self._index >= self._length:
+                self.error("Expecting ',' delimiter")
+            char = self._text[self._index]
+            self._index += 1
+            if char == "}":
+                return result
+            if char != ",":
+                self.error("Expecting ',' delimiter")
+
+    def _parse_array(self):
+        result = []
+        self._index += 1  # consume '['
+        self._skip_whitespace()
+        if self._index < self._length and self._text[self._index] == "]":
+            self._index += 1
+            return result
+        while True:
+            self._skip_whitespace()
+            result.append(self._parse_value())
+            self._skip_whitespace()
+            if self._index >= self._length:
+                self.error("Expecting ',' delimiter")
+            char = self._text[self._index]
+            self._index += 1
+            if char == "]":
+                return result
+            if char != ",":
+                self.error("Expecting ',' delimiter")
+
+    def _parse_string(self):
+        text = self._text
+        index = self._index + 1  # skip the opening quote
+        length = self._length
+        chunks = []
+        while True:
+            if index >= length:
+                self._index = index
+                self.error("Unterminated string")
+            char = text[index]
+            if char == '"':
+                self._index = index + 1
+                return "".join(chunks)
+            if char != "\\":
+                chunks.append(char)
+                index += 1
+                continue
+            index += 1
+            if index >= length:
+                self._index = index
+                self.error("Unterminated string escape")
+            escape = text[index]
+            if escape == "u":
+                code = self._parse_hex4(index + 1)
+                index += 5
+                if 0xD800 <= code <= 0xDBFF and text[index:index + 2] == "\\u":
+                    low = self._parse_hex4(index + 2)
+                    if 0xDC00 <= low <= 0xDFFF:
+                        code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)
+                        index += 6
+                chunks.append(chr(code))
+                continue
+            replacement = _JSON_UNESCAPE_MAP.get(escape)
+            if replacement is None:
+                self._index = index
+                self.error("Invalid escape")
+            chunks.append(replacement)
+            index += 1
+
+    def _parse_hex4(self, start):
+        digits = self._text[start:start + 4]
+        if len(digits) != 4:
+            self._index = start
+            self.error("Invalid \\uXXXX escape")
+        try:
+            return int(digits, 16)
+        except ValueError:
+            self._index = start
+            self.error("Invalid \\uXXXX escape")
+
+    def _parse_number(self):
+        text = self._text
+        start = self._index
+        index = start
+        length = self._length
+        if index < length and text[index] == "-":
+            index += 1
+        digits_start = index
+        while index < length and "0" <= text[index] <= "9":
+            index += 1
+        if index == digits_start:
+            self._index = start
+            self.error("Expecting value")
+        is_float = False
+        if index < length and text[index] == ".":
+            is_float = True
+            index += 1
+            fraction_start = index
+            while index < length and "0" <= text[index] <= "9":
+                index += 1
+            if index == fraction_start:
+                self._index = start
+                self.error("Expecting value")
+        if index < length and text[index] in "eE":
+            is_float = True
+            index += 1
+            if index < length and text[index] in "+-":
+                index += 1
+            exponent_start = index
+            while index < length and "0" <= text[index] <= "9":
+                index += 1
+            if index == exponent_start:
+                self._index = start
+                self.error("Expecting value")
+        raw = text[start:index]
+        self._index = index
+        if is_float:
+            return float(raw)
+        return int(raw)
+
+
+def _json_loads(text):
+    """Parse a JSON document and return the resulting value.
+
+    Mirrors ``json.loads`` but without importing the standard library.
+    """
+    return _JsonParser(text).parse()
+
+
+# =============================================================================
+# FILESYSTEM HELPERS
+#
+# `os` and `pathlib` are not available inside FL Studio's stripped
+# interpreter, so paths are handled with plain string operations and the
+# builtin `open()`.
+# =============================================================================
+
+# Name of this script inside FL Studio's Hardware folder.
+SCRIPT_FILENAME = "device_FLStudioMCP.py"
+
+# Folder name the MCP controller is installed into (Hardware\<folder>).
+HARDWARE_FOLDER = "FLStudioMCP"
+
+# Manual override for the folder that holds the command/response files.
+# Leave empty to auto-detect.  Set it to an absolute path when FL Studio's
+# user data folder was relocated (for example to a cloud drive) and the
+# MCP server cannot find it.
+COMMAND_DIR_OVERRIDE = ""
+
+
+def _path_separator():
+    """Return the platform's path separator."""
+    return "\\" if sys.platform == "win32" else "/"
+
+
+def _join_path(directory, name):
+    """Join a directory and a file name using the platform separator."""
+    if not directory:
+        return name
+    if directory[-1] in ("/", "\\"):
+        return directory + name
+    return directory + _path_separator() + name
+
+
+def _path_name(path):
+    """Return the final component of *path* (without any directory part)."""
+    trimmed = path
+    while trimmed and trimmed[-1] in ("/", "\\"):
+        trimmed = trimmed[:-1]
+    for index in range(len(trimmed) - 1, -1, -1):
+        if trimmed[index] in ("/", "\\"):
+            return trimmed[index + 1:]
+    return trimmed
+
+
+def _file_exists(path):
+    """Return True when *path* can be opened for reading."""
+    try:
+        handle = open(path, "rb")
+    except Exception:
+        return False
+    try:
+        handle.close()
+    except Exception:
+        pass
+    return True
+
+
+def _read_text(path):
+    """Read *path* and decode it as UTF-8."""
+    with open(path, "rb") as handle:
+        return handle.read().decode("utf-8", "replace")
+
+
+def _write_text(path, text):
+    """Write *text* to *path* encoded as UTF-8."""
+    with open(path, "wb") as handle:
+        handle.write(text.encode("utf-8", "replace"))
+
+
+def _discover_script_dir():
+    """Find the folder this script lives in.
+
+    FL Studio adds the controller folder to ``sys.path`` (which is why
+    sibling modules can be imported from a MIDI script), and it is the only
+    reliable way to locate the hardware folder without ``os``.  The search
+    therefore looks for a ``sys.path`` entry that either contains this
+    script or is named ``FLStudioMCP``.
+    """
+    entries = []
+    for entry in sys.path:
+        if entry and entry not in entries:
+            entries.append(entry)
+
+    # Strongest signal: the entry actually contains this script.
+    for entry in entries:
+        if _file_exists(_join_path(entry, SCRIPT_FILENAME)):
+            return entry
+
+    # Next best: the entry is the hardware folder we install into.
+    for entry in entries:
+        if _path_name(entry).lower() == HARDWARE_FOLDER.lower():
+            return entry
+
+    return ""
+
+
+def _resolve_script_dir():
+    """Resolve the folder used for the command/response files."""
+    if COMMAND_DIR_OVERRIDE:
+        return COMMAND_DIR_OVERRIDE
+    return _discover_script_dir()
+
+
+# Folder used to exchange commands and responses with the MCP server.
+SCRIPT_DIR = _resolve_script_dir()
+COMMAND_FILE = _join_path(SCRIPT_DIR, "mcp_command.json")
+RESPONSE_FILE = _join_path(SCRIPT_DIR, "mcp_response.json")
 
 # MIDI trigger note
 TRIGGER_NOTE = 127
-
-import time as _time
 
 _HOT_RELOAD_CHECKED_AT = 0.0
 _HOT_RELOAD_VERSION = MCP_VERSION
 
 
+def _now():
+    """Return the current time in seconds (0.0 when `time` is missing)."""
+    if _time is None:
+        return 0.0
+    return _time.time()
+
+
 def _check_hot_reload():
     """Self-reload the script file if it changed on disk (auto refresh)."""
     global _HOT_RELOAD_CHECKED_AT, _HOT_RELOAD_VERSION
-    now = _time.time()
+    if _time is None:
+        return
+    now = _now()
     if now - _HOT_RELOAD_CHECKED_AT < 1.0:
         return
     _HOT_RELOAD_CHECKED_AT = now
     try:
-        script_file = Path(_get_script_dir()) / "device_FLStudioMCP.py"
-        text = script_file.read_text(encoding="utf-8", errors="replace")
+        script_file = _join_path(SCRIPT_DIR, SCRIPT_FILENAME)
+        if not _file_exists(script_file):
+            return
+        text = _read_text(script_file)
         match = None
         for line in text.splitlines():
             if line.startswith("MCP_VERSION"):
@@ -116,7 +607,7 @@ def _check_hot_reload():
         if match is None:
             return
         if match != _HOT_RELOAD_VERSION:
-            compiled = compile(text, str(script_file), "exec")
+            compiled = compile(text, script_file, "exec")
             exec(compiled, globals())
             _HOT_RELOAD_VERSION = match
             print(f"[MCP] hot-reloaded to version {match}")
@@ -126,12 +617,20 @@ def _check_hot_reload():
 
 def OnInit():
     print("FL Studio MCP Controller initialized")
+    print(f"MCP_VERSION: {MCP_VERSION}")
     print(f"Command file: {COMMAND_FILE}")
     print(f"Response file: {RESPONSE_FILE}")
+    if not SCRIPT_DIR:
+        print(
+            "[MCP] WARNING: could not locate the controller folder. "
+            "Set COMMAND_DIR_OVERRIDE at the top of the script to the "
+            "folder that holds mcp_command.json / mcp_response.json."
+        )
 
 
 def OnDeInit():
     print("FL Studio MCP Controller deinitialized")
+
 
 
 def OnMidiMsg(event):
@@ -151,13 +650,13 @@ def execute_pending_command():
 
     try:
         # Read command file
-        if not COMMAND_FILE.exists():
+        if not _file_exists(COMMAND_FILE):
             response["error"] = "No command file found"
             write_response(response)
             return
 
-        command_text = COMMAND_FILE.read_text()
-        command = json.loads(command_text)
+        command_text = _read_text(COMMAND_FILE)
+        command = _json_loads(command_text)
 
         action = command.get("action", "")
         params = command.get("params", {})
@@ -166,7 +665,7 @@ def execute_pending_command():
         result = dispatch_command(action, params)
         response = {"success": True, **result}
 
-    except json.JSONDecodeError as e:
+    except _JsonError as e:
         response["error"] = f"Invalid JSON in command file: {e}"
     except Exception as e:
         response["error"] = f"Error executing command: {e}"
@@ -177,7 +676,7 @@ def execute_pending_command():
 def write_response(response: dict):
     """Write response to JSON file."""
     try:
-        RESPONSE_FILE.write_text(json.dumps(response, indent=2))
+        _write_text(RESPONSE_FILE, _json_dumps(response, indent=2))
     except Exception as e:
         print(f"Error writing response: {e}")
 
@@ -341,6 +840,8 @@ def dispatch_command(action: str, params: dict) -> dict:
         return handle_system_modules(params)
     elif action == "system.surface":
         return handle_system_surface(params)
+    elif action == "system.diagnostics":
+        return handle_system_diagnostics(params)
 
     # Undo / project / general
     elif action == "general.saveUndo":
@@ -1537,34 +2038,28 @@ _CANDIDATE_MODULES = [
 _VALIDATED_MODULES = {}
 
 
+def _try_import(name):
+    """Import a module by name without relying on `importlib`.
+
+    `importlib` is not part of FL Studio's stripped standard library, but the
+    `__import__` builtin is always available.
+    """
+    try:
+        return __import__(name)
+    except Exception:
+        return None
+
+
 def _probe_modules():
     """Discover which API modules this FL version actually ships.
 
-    Uses importlib if available, else plain import in a dict namespace.
     Safe: each candidate is imported in a fresh try/except.
     """
-    import builtins
-
     found = {}
-    try:
-        import importlib
-        for name in _CANDIDATE_MODULES:
-            try:
-                mod = importlib.import_module(name)
-                if mod is not None:
-                    found[name] = mod
-            except Exception:
-                pass
-    except Exception:
-        for name in _CANDIDATE_MODULES:
-            try:
-                ns = {}
-                exec("import " + name, ns)
-                mod = ns.get(name)
-                if mod is not None:
-                    found[name] = mod
-            except Exception:
-                pass
+    for name in _CANDIDATE_MODULES:
+        mod = _try_import(name)
+        if mod is not None:
+            found[name] = mod
     return found
 
 
@@ -1705,6 +2200,67 @@ def handle_system_surface(params: dict) -> dict:
             "constants": const_names,
         }
     return {"surface": result}
+
+
+def handle_system_diagnostics(params: dict) -> dict:
+    """Report the environment this controller is running in.
+
+    This is the first thing to look at when the bridge misbehaves: it shows
+    the FL Studio API version, the (heavily stripped) embedded Python, which
+    standard library modules are importable and where the controller expects
+    to find the command/response files.
+    """
+    diagnostics = {
+        "mcp_version": MCP_VERSION,
+        "script_dir": SCRIPT_DIR,
+        "command_file": COMMAND_FILE,
+        "response_file": RESPONSE_FILE,
+        "script_dir_found": bool(SCRIPT_DIR),
+        "command_dir_override": COMMAND_DIR_OVERRIDE,
+        "python_version": getattr(sys, "version", "unknown"),
+        "platform": sys.platform,
+    }
+
+    # FL Studio API version (20.7 = 1, 21.0 = 28, 2025 = 40+).
+    try:
+        diagnostics["fl_api_version"] = general.getVersion()
+    except Exception:
+        diagnostics["fl_api_version"] = None
+
+    # Built-in modules: FL Studio compiles a cut-down CPython, so this list
+    # is the authoritative answer to "what can I import here?".
+    builtins_list = list(getattr(sys, "builtin_module_names", ()))
+    diagnostics["builtin_modules"] = builtins_list
+
+    # Which of the usual standard library modules can be imported.
+    importable = {}
+    for name in ("json", "os", "sys", "time", "pathlib", "importlib", "math", "binascii"):
+        importable[name] = _try_import(name) is not None
+    diagnostics["importable"] = importable
+
+    # FL API modules available in this FL Studio build.
+    available = {}
+    for name, module in (
+        ("channels", channels),
+        ("mixer", mixer),
+        ("transport", transport),
+        ("plugins", plugins),
+        ("patterns", patterns),
+        ("playlist", playlist),
+        ("general", general),
+        ("ui", ui),
+        ("arrangement", arrangement),
+        ("device", device),
+        ("midi", midi),
+    ):
+        available[name] = module is not None
+    diagnostics["api_modules"] = available
+
+    # Whether the command/response files are visible from here.
+    diagnostics["command_file_exists"] = _file_exists(COMMAND_FILE)
+    diagnostics["response_file_exists"] = _file_exists(RESPONSE_FILE)
+
+    return {"diagnostics": diagnostics}
 
 
 def handle_general_save_undo(params: dict) -> dict:
