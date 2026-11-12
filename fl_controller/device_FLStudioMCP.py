@@ -1433,6 +1433,26 @@ def handle_channels_set_steps(params: dict) -> dict:
         except Exception:
             pat_num = -1
 
+    # Grid bits always target the CURRENT pattern, while
+    # setStepParameterByIndex takes an explicit pattern: align both here.
+    restore_pat = None
+    if pat_num != -1 and _patterns_supported():
+        try:
+            if patterns.patternNumber() != pat_num:
+                restore_pat = patterns.patternNumber()
+                patterns.selectPattern(pat_num, 1)
+                patterns.jumpToPattern(pat_num)
+        except Exception:
+            restore_pat = None
+
+    def _restore():
+        if restore_pat is not None:
+            try:
+                patterns.selectPattern(restore_pat, 1)
+                patterns.jumpToPattern(restore_pat)
+            except Exception:
+                pass
+
     for entry in steps_data:
         step = entry.get("step", 0)
 
@@ -1446,6 +1466,7 @@ def handle_channels_set_steps(params: dict) -> dict:
                         channel, pat_num, step, 0, entry["note"], use_global
                     )
                 except Exception as e:
+                    _restore()
                     return {"error": f"setStepParameterByIndex(note) failed: {e}"}
             if "velocity" in entry:
                 try:
@@ -1453,6 +1474,7 @@ def handle_channels_set_steps(params: dict) -> dict:
                         channel, pat_num, step, 1, entry["velocity"], use_global
                     )
                 except Exception as e:
+                    _restore()
                     return {"error": f"setStepParameterByIndex(velocity) failed: {e}"}
             if "pan" in entry:
                 try:
@@ -1460,8 +1482,10 @@ def handle_channels_set_steps(params: dict) -> dict:
                         channel, pat_num, step, 4, entry["pan"], use_global
                     )
                 except Exception as e:
+                    _restore()
                     return {"error": f"setStepParameterByIndex(pan) failed: {e}"}
 
+    _restore()
     return {
         "channel": channel,
         "channel_name": channels.getChannelName(channel, use_global),
@@ -2569,27 +2593,27 @@ def _pack_color(params):
     return (int(params.get("b", 0)) << 16) | (int(params.get("g", 0)) << 8) | int(params.get("r", 0))
 
 
-def _convert_arg(kind, params):
+def _convert_arg(param, kind, params):
     if kind == "int":
-        return int(params[kind])
+        return int(params[param])
     if kind == "float":
-        return float(params[kind])
+        return float(params[param])
     if kind == "str":
-        return str(params[kind])
+        return str(params[param])
     if kind == "bool":
-        return 1 if params[kind] else 0
+        return 1 if params[param] else 0
     if kind == "epb":
-        return int(float(params[kind]) * 1000.0)
+        return int(float(params[param]) * 1000.0)
     if kind == "color":
         return _pack_color(params)
     if kind == "sysex":
-        data = params[kind]
+        data = params[param]
         if isinstance(data, list):
             return bytes(data)
         if isinstance(data, str):
             return bytes(int(x, 16) for x in data.replace(" ", "").split(",") if x)
         return bytes()
-    return params[kind]
+    return params[param]
 
 
 GENERIC_COMMANDS = {
@@ -3004,7 +3028,7 @@ def handle_generic_command(action: str, params: dict):
     args = []
     try:
         for param, kind in arg_spec:
-            args.append(_convert_arg(kind, params))
+            args.append(_convert_arg(param, kind, params))
     except (KeyError, TypeError, ValueError) as e:
         return {"error": f"{action}: missing/invalid argument '{param}' ({e})",
                 "expected": [p for p, _ in arg_spec]}
