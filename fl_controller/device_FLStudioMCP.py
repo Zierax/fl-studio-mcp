@@ -1,8 +1,6 @@
 # name=FL Studio MCP Controller
 # supportedDevices=FLStudioMCP
 
-MCP_VERSION = 3
-
 """
 FL Studio MIDI Controller Script for MCP Integration.
 
@@ -44,6 +42,9 @@ import channels
 import mixer
 import plugins
 import transport
+
+# Hot-reload marker. Bump this to make FL Studio reload the script.
+MCP_VERSION = 3
 
 try:
     import general
@@ -3100,7 +3101,11 @@ def handle_project_snapshot(params: dict) -> dict:
         pc = patterns.patternCount()
         for i in range(pc):
             try:
-                snap["patterns"].append({"index": i, "name": patterns.getPatternName(i), "length": patterns.getPatternLength(i)})
+                snap["patterns"].append({
+                    "index": i,
+                    "name": patterns.getPatternName(i),
+                    "length": patterns.getPatternLength(i),
+                })
             except Exception:
                 snap["patterns"].append({"index": i, "name": patterns.getPatternName(i)})
     except Exception as e:
@@ -3109,7 +3114,12 @@ def handle_project_snapshot(params: dict) -> dict:
         channels_out = []
         cc = channels.channelCount()
         for i in range(cc):
-            ch = {"index": i, "name": channels.getChannelName(i), "color": channels.getChannelColor(i), "muted": channels.isChannelMuted(i)}
+            ch = {
+                "index": i,
+                "name": channels.getChannelName(i),
+                "color": channels.getChannelColor(i),
+                "muted": channels.isChannelMuted(i),
+            }
             if include_playlist:
                 try:
                     ch["mixer_track"] = channels.getChannelMixerTrack(i)
@@ -3204,7 +3214,11 @@ GENERIC_COMMANDS = {
     "mixer.afterRoutingChanged": ("mixer", "afterRoutingChanged", []),
     "mixer.focusEditor": ("mixer", "focusEditor", [("track", "int")]),
     "mixer.setCurrentTempo": ("mixer", "setCurrentTempo", [("bpm", "epb")]),
-    "mixer.automateEvent": ("mixer", "automateEvent", [("track", "int"), ("eventId", "int"), ("value", "int"), ("flags", "int")]),
+    "mixer.automateEvent": (
+        "mixer",
+        "automateEvent",
+        [("track", "int"), ("eventId", "int"), ("value", "int"), ("flags", "int")],
+    ),
     "mixer.getTrackVolume": ("mixer", "getTrackVolume", [("track", "int")]),
     "mixer.getTrackPan": ("mixer", "getTrackPan", [("track", "int")]),
     "mixer.getTrackStereoSep": ("mixer", "getTrackStereoSep", [("track", "int")]),
@@ -3268,7 +3282,11 @@ GENERIC_COMMANDS = {
     "channels.updateGraphEditor": ("channels", "updateGraphEditor", [("channel", "int")]),
     "channels.closeGraphEditor": ("channels", "closeGraphEditor", []),
     "channels.setGridBit": ("channels", "setGridBit", [("channel", "int"), ("gridBit", "int"), ("value", "int")]),
-    "channels.setStepParameterByIndex": ("channels", "setStepParameterByIndex", [("channel", "int"), ("step", "int"), ("paramIndex", "int"), ("value", "int")]),
+    "channels.setStepParameterByIndex": (
+        "channels",
+        "setStepParameterByIndex",
+        [("channel", "int"), ("step", "int"), ("paramIndex", "int"), ("value", "int")],
+    ),
     "channels.incEventValue": ("channels", "incEventValue", [("channel", "int"), ("value", "int"), ("eventId", "int")]),
     "channels.midiNoteOn": ("channels", "midiNoteOn", [("channel", "int"), ("note", "int"), ("velocity", "int")]),
     "channels.quickQuantize": ("channels", "quickQuantize", [("channel", "int"), ("mode", "int")]),
@@ -3300,7 +3318,11 @@ GENERIC_COMMANDS = {
     "channels.getGridBitWithLoop": ("channels", "getGridBitWithLoop", [("channel", "int")]),
     "channels.isGridBitAssigned": ("channels", "isGridBitAssigned", [("channel", "int"), ("gridBit", "int")]),
     "channels.getTargetFxTrack": ("channels", "getTargetFxTrack", [("channel", "int")]),
-    "channels.processRECEvent": ("channels", "processRECEvent", [("channel", "int"), ("value", "int"), ("eventId", "int"), ("flags", "int")]),
+    "channels.processRECEvent": (
+        "channels",
+        "processRECEvent",
+        [("channel", "int"), ("value", "int"), ("eventId", "int"), ("flags", "int")],
+    ),
 
     # ============================= TRANSPORT =============================
     "transport.start": ("transport", "start", []),
@@ -3308,7 +3330,11 @@ GENERIC_COMMANDS = {
     "transport.record": ("transport", "record", []),
     "transport.rewind": ("transport", "rewind", [("startStop", "int"), ("flags", "int")]),
     "transport.fastForward": ("transport", "fastForward", [("startStop", "int"), ("flags", "int")]),
-    "transport.globalTransport": ("transport", "globalTransport", [("command", "int"), ("value", "int"), ("pmeflags", "int"), ("flags", "int")]),
+    "transport.globalTransport": (
+        "transport",
+        "globalTransport",
+        [("command", "int"), ("value", "int"), ("pmeflags", "int"), ("flags", "int")],
+    ),
     "transport.setSongPos": ("transport", "setSongPos", [("position", "int"), ("mode", "int")]),
     "transport.getSongPos": ("transport", "getSongPos", [("mode", "int")]),
     "transport.getSongPosHint": ("transport", "getSongPosHint", []),
@@ -3538,7 +3564,11 @@ GENERIC_COMMANDS = {
     "device.forwardMIDICC": ("device", "forwardMIDICC", [("event", "int"), ("value", "int"), ("flags", "int")]),
     "device.processMIDICC": ("device", "processMIDICC", [("event", "int"), ("value", "int"), ("flags", "int")]),
     "device.releaseCC": ("device", "releaseCC", [("event", "int")]),
-    "device.repeatMidiEvent": ("device", "repeatMidiEvent", [("type", "int"), ("status", "int"), ("data1", "int"), ("data2", "int")]),
+    "device.repeatMidiEvent": (
+        "device",
+        "repeatMidiEvent",
+        [("type", "int"), ("status", "int"), ("data1", "int"), ("data2", "int")],
+    ),
     "device.stopRepeatMidiEvent": ("device", "stopRepeatMidiEvent", []),
     "device.midiOutMsg": ("device", "midiOutMsg", [("status", "int"), ("data1", "int"), ("data2", "int")]),
     "device.midiOutNewMsg": ("device", "midiOutNewMsg", [("status", "int"), ("data1", "int"), ("data2", "int")]),
@@ -3550,10 +3580,26 @@ GENERIC_COMMANDS = {
 
     # ============================= PLUGINS =============================
     "plugins.getParamCount": ("plugins", "getParamCount", [("index", "int"), ("slotIndex", "int")]),
-    "plugins.getParamName": ("plugins", "getParamName", [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")]),
-    "plugins.getParamValue": ("plugins", "getParamValue", [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")]),
-    "plugins.getParamValueString": ("plugins", "getParamValueString", [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")]),
-    "plugins.setParamValue": ("plugins", "setParamValue", [("value", "float"), ("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")]),
+    "plugins.getParamName": (
+        "plugins",
+        "getParamName",
+        [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")],
+    ),
+    "plugins.getParamValue": (
+        "plugins",
+        "getParamValue",
+        [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")],
+    ),
+    "plugins.getParamValueString": (
+        "plugins",
+        "getParamValueString",
+        [("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")],
+    ),
+    "plugins.setParamValue": (
+        "plugins",
+        "setParamValue",
+        [("value", "float"), ("paramIndex", "int"), ("index", "int"), ("slotIndex", "int")],
+    ),
     "plugins.getPresetCount": ("plugins", "getPresetCount", [("index", "int"), ("slotIndex", "int")]),
     "plugins.nextPreset": ("plugins", "nextPreset", [("index", "int"), ("slotIndex", "int")]),
     "plugins.prevPreset": ("plugins", "prevPreset", [("index", "int"), ("slotIndex", "int")]),
@@ -3561,7 +3607,11 @@ GENERIC_COMMANDS = {
     "plugins.getName": ("plugins", "getName", [("index", "int"), ("slotIndex", "int")]),
     "plugins.getPluginName": ("plugins", "getPluginName", [("index", "int"), ("slotIndex", "int")]),
     "plugins.getColor": ("plugins", "getColor", [("index", "int"), ("slotIndex", "int")]),
-    "plugins.getPadInfo": ("plugins", "getPadInfo", [("chanIndex", "int"), ("slotIndex", "int"), ("paramOption", "int"), ("paramIndex", "int")]),
+    "plugins.getPadInfo": (
+        "plugins",
+        "getPadInfo",
+        [("chanIndex", "int"), ("slotIndex", "int"), ("paramOption", "int"), ("paramIndex", "int")],
+    ),
 }
 
 

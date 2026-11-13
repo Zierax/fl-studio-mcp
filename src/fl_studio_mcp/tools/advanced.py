@@ -330,7 +330,14 @@ def register_advanced_tools(mcp: FastMCP) -> None:
         return f"Send {track}->{dest} {'active' if active else 'inactive'}"
 
     @mcp.tool()
-    def fl_mixer_equalizer(track: int, mode: str = "get", band: int = 0, gain: float | None = None, freq: float | None = None, q: float | None = None) -> dict:
+    def fl_mixer_equalizer(
+        track: int,
+        mode: str = "get",
+        band: int = 0,
+        gain: float | None = None,
+        freq: float | None = None,
+        q: float | None = None,
+    ) -> dict:
         """Control the built-in mixer track EQ (3 bands in this FL version).
 
         NOTE: values are normalized 0-1, not dB/Hz (0.5 = unity gain).

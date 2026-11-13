@@ -160,25 +160,36 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         conn = get_connection()
         done = []
         if volume is not None:
-            conn.send_command("mixer.setTrackVolume", {"track": track, "value": volume}); done.append("volume")
+            conn.send_command("mixer.setTrackVolume", {"track": track, "value": volume})
+            done.append("volume")
         if pan is not None:
-            conn.send_command("mixer.setTrackPan", {"track": track, "value": pan}); done.append("pan")
+            conn.send_command("mixer.setTrackPan", {"track": track, "value": pan})
+            done.append("pan")
         if stereo_sep is not None:
-            conn.send_command("mixer.setTrackStereoSep", {"track": track, "value": stereo_sep}); done.append("stereo_sep")
+            conn.send_command("mixer.setTrackStereoSep", {"track": track, "value": stereo_sep})
+            done.append("stereo_sep")
         if name is not None:
-            conn.send_command("mixer.setTrackName", {"track": track, "name": name}); done.append("name")
+            conn.send_command("mixer.setTrackName", {"track": track, "name": name})
+            done.append("name")
         if muted is not None:
-            conn.send_command("mixer.muteTrack", {"track": track, "mute": muted}); done.append("mute")
+            conn.send_command("mixer.muteTrack", {"track": track, "mute": muted})
+            done.append("mute")
         if solo is not None:
-            conn.send_command("mixer.soloTrack", {"track": track, "solo": solo}); done.append("solo")
+            conn.send_command("mixer.soloTrack", {"track": track, "solo": solo})
+            done.append("solo")
         if selected is not None:
-            conn.send_command("mixer.selectTrack", {"track": track, "select": selected}); done.append("select")
+            conn.send_command("mixer.selectTrack", {"track": track, "select": selected})
+            done.append("select")
         if armed is not None:
-            conn.send_command("mixer.armTrack", {"track": track, "armed": armed}); done.append("arm")
+            conn.send_command("mixer.armTrack", {"track": track, "armed": armed})
+            done.append("arm")
         if enabled is not None:
-            conn.send_command("mixer.enableTrack", {"track": track, "enabled": enabled}); done.append("enable")
+            conn.send_command("mixer.enableTrack", {"track": track, "enabled": enabled})
+            done.append("enable")
         if rgb:
-            conn.send_command("mixer.setTrackColor", {"track": track, "r": int(rgb[0]), "g": int(rgb[1]), "b": int(rgb[2])}); done.append("color")
+            conn.send_command("mixer.setTrackColor",
+                {"track": track, "r": int(rgb[0]), "g": int(rgb[1]), "b": int(rgb[2])})
+            done.append("color")
         if not done:
             return "No properties given"
         conn.send_command("general.saveUndo", {"name": "MCP mixer track set"})
@@ -226,7 +237,9 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         """Route mixer track to dest bus. value = send level 0-1, width = stereo."""
         conn = get_connection()
         r = conn.send_command("mixer.route", {"track": track, "dest": dest, "value": value, "width": width})
-        return f"Routed {track} -> {dest} @ {value}" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Routed {track} -> {dest} @ {value}"
 
 
 
@@ -279,23 +292,33 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         conn = get_connection()
         done = []
         if volume is not None:
-            conn.send_command("channels.setChannelVolume", {"channel": channel, "value": volume}); done.append("volume")
+            conn.send_command("channels.setChannelVolume", {"channel": channel, "value": volume})
+            done.append("volume")
         if pan is not None:
-            conn.send_command("channels.setChannelPan", {"channel": channel, "value": pan}); done.append("pan")
+            conn.send_command("channels.setChannelPan", {"channel": channel, "value": pan})
+            done.append("pan")
         if pitch is not None:
-            conn.send_command("channels.setChannelPitch", {"channel": channel, "value": pitch}); done.append("pitch")
+            conn.send_command("channels.setChannelPitch", {"channel": channel, "value": pitch})
+            done.append("pitch")
         if name is not None:
-            conn.send_command("channels.setChannelName", {"channel": channel, "name": name}); done.append("name")
+            conn.send_command("channels.setChannelName", {"channel": channel, "name": name})
+            done.append("name")
         if muted is not None:
-            conn.send_command("channels.muteChannel", {"channel": channel, "muted": muted}); done.append("mute")
+            conn.send_command("channels.muteChannel", {"channel": channel, "muted": muted})
+            done.append("mute")
         if solo is not None:
-            conn.send_command("channels.soloChannel", {"channel": channel, "solo": solo}); done.append("solo")
+            conn.send_command("channels.soloChannel", {"channel": channel, "solo": solo})
+            done.append("solo")
         if selected is not None:
-            conn.send_command("channels.selectChannel", {"channel": channel, "select": selected}); done.append("select")
+            conn.send_command("channels.selectChannel", {"channel": channel, "select": selected})
+            done.append("select")
         if rgb:
-            conn.send_command("channels.setChannelColor", {"channel": channel, "r": int(rgb[0]), "g": int(rgb[1]), "b": int(rgb[2])}); done.append("color")
+            conn.send_command("channels.setChannelColor",
+                {"channel": channel, "r": int(rgb[0]), "g": int(rgb[1]), "b": int(rgb[2])})
+            done.append("color")
         if fx_track is not None:
-            conn.send_command("channels.setTargetFxTrack", {"channel": channel, "track": fx_track}); done.append("fx_track")
+            conn.send_command("channels.setTargetFxTrack", {"channel": channel, "track": fx_track})
+            done.append("fx_track")
         if not done:
             return "No properties given"
         conn.send_command("general.saveUndo", {"name": "MCP channel set"})
@@ -559,14 +582,18 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         """Clone pattern 'source' into slot 'dest'."""
         conn = get_connection()
         r = conn.send_command("patterns.clonePattern", {"from": source, "to": dest})
-        return f"Cloned pattern {source} -> {dest}" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Cloned pattern {source} -> {dest}"
 
     @mcp.tool()
     def fl_pattern_rename(pattern: int, name: str) -> str:
         """Rename a pattern."""
         conn = get_connection()
         r = conn.send_command("patterns.setPatternName", {"pattern": pattern, "name": name})
-        return f"Pattern {pattern} renamed '{name}'" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Pattern {pattern} renamed '{name}'"
 
     @mcp.tool()
     def fl_pattern_burn_loop(pattern: int) -> str:
@@ -605,7 +632,7 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     def fl_undo_manager() -> dict:
-        """Undo stack state: count, position, last, level hint.""" 
+        """Undo stack state: count, position, last, level hint."""
         conn = get_connection()
         out = {}
         for field, action in (
@@ -678,7 +705,9 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         r = conn.send_command("playlist.muteTrack", {"track": track, "mute": muted})
         if lock is not None:
             conn.send_command("playlist.muteTrackLock", {"track": track, "lock": lock})
-        return f"Playlist track {track} {'muted' if muted else 'unmuted'}" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Playlist track {track} {'muted' if muted else 'unmuted'}"
 
     # ---------------------------------------------------------------
     # UI surface
@@ -833,14 +862,18 @@ def register_fullcontrol_tools(mcp: FastMCP) -> None:
         """Enable/disable the device's master sync (transport clock out)."""
         conn = get_connection()
         r = conn.send_command("device.setMasterSync", {"enabled": enabled})
-        return f"Master sync {'on' if enabled else 'off'}" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Master sync {'on' if enabled else 'off'}"
 
     @mcp.tool()
     def fl_device_midi_out(status: int, data1: int, data2: int) -> str:
         """Send a raw MIDI message out of the controller port."""
         conn = get_connection()
         r = conn.send_command("device.midiOutMsg", {"status": status, "data1": data1, "data2": data2})
-        return f"Sent MIDI {status:02X} {data1:02X} {data2:02X}" if not (isinstance(r, dict) and "error" in r) else f"Error: {r['error']}"
+        if isinstance(r, dict) and "error" in r:
+            return f"Error: {r['error']}"
+        return f"Sent MIDI {status:02X} {data1:02X} {data2:02X}"
 
     @mcp.tool()
     def fl_device_full_refresh() -> str:
