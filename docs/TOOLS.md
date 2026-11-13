@@ -184,4 +184,4 @@ An honest list, so you don't waste prompts on them:
 - **Load VST plugins.** Plugins are controlled, never instantiated.
 - **Persist live note triggers** (unless recording).
 
-Workarounds and details: [docs/LIMITATIONS.md](docs/LIMITATIONS.md)
+Workarounds and details: [docs/LIMITATIONS.md](LIMITATIONS.md)
