@@ -11,6 +11,7 @@ The approach is:
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -141,6 +142,19 @@ class MIDIConnection:
                     self._error or "Failed to connect to FL Studio via MIDI"
                 )
 
+    def _write_command(self, command: dict[str, Any]) -> None:
+        """Write the command file atomically.
+
+        The controller script reads the file as soon as the MIDI trigger
+        arrives, so a partially written file would show up as a JSON error
+        inside FL Studio.  Writing to a temporary file and renaming it makes
+        the swap atomic on both POSIX and Windows.
+        """
+        payload = json.dumps(command, indent=2)
+        temporary = self._command_file.with_name(self._command_file.name + ".tmp")
+        temporary.write_text(payload, encoding="utf-8")
+        os.replace(temporary, self._command_file)
+
     def send_command(
         self,
         action: str,
@@ -155,7 +169,7 @@ class MIDIConnection:
         }
 
         try:
-            self._command_file.write_text(json.dumps(command, indent=2))
+            self._write_command(command)
         except Exception as e:
             return {"success": False, "error": f"Failed to write command file: {e}"}
 
@@ -177,30 +191,51 @@ class MIDIConnection:
     def _wait_for_response(self, timeout: float) -> dict[str, Any]:
         start_time = time.time()
         poll_interval = 0.05
+        last_error: str | None = None
 
         while time.time() - start_time < timeout:
             if self._response_file.exists():
                 try:
-                    response_text = self._response_file.read_text()
-                    response = json.loads(response_text)
-                    try:
-                        self._response_file.unlink()
-                    except Exception:
-                        pass
-                    return response
-                except json.JSONDecodeError as e:
-                    return {"success": False, "error": f"Invalid JSON in response: {e}"}
+                    response_text = self._response_file.read_text(encoding="utf-8")
                 except Exception as e:
-                    return {"success": False, "error": f"Failed to read response: {e}"}
+                    last_error = f"Failed to read response: {e}"
+                    time.sleep(poll_interval)
+                    continue
+
+                try:
+                    response = json.loads(response_text)
+                except json.JSONDecodeError as e:
+                    # The controller may still be writing the file; give it
+                    # a moment before giving up.
+                    last_error = f"Invalid JSON in response: {e}"
+                    time.sleep(poll_interval)
+                    continue
+
+                try:
+                    self._response_file.unlink()
+                except Exception:
+                    pass
+                return response
 
             time.sleep(poll_interval)
+
+        if last_error:
+            return {
+                "success": False,
+                "error": (
+                    f"Timeout waiting for FL Studio response after {timeout}s "
+                    f"({last_error}). Make sure FL Studio is running and the "
+                    "MCP controller is enabled in MIDI Settings."
+                ),
+            }
 
         return {
             "success": False,
             "error": (
                 f"Timeout waiting for FL Studio response after {timeout}s. "
                 "Make sure FL Studio is running and the MCP controller is enabled "
-                "in MIDI Settings."
+                f"in MIDI Settings. The server is using MIDI port "
+                f"{self._port_name!r} and the command folder {self._hardware_dir}."
             ),
         }
 
