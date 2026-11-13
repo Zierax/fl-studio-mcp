@@ -11,24 +11,11 @@ The approach is:
 from __future__ import annotations
 
 import json
-import platform
 import time
 from pathlib import Path
 from typing import Any
 
-
-def _get_fl_hardware_dir() -> Path:
-    """Get the FL Studio Hardware scripts directory."""
-    system = platform.system()
-
-    if system in ("Darwin", "Windows"):
-        base = Path.home() / "Documents" / "Image-Line" / "FL Studio" / "Settings"
-    else:
-        base = Path.home() / ".fl-studio" / "Settings"
-
-    hardware_dir = base / "Hardware" / "FLStudioMCP"
-    hardware_dir.mkdir(parents=True, exist_ok=True)
-    return hardware_dir
+from fl_studio_mcp.utils import paths
 
 
 class MIDIConnection:
@@ -41,15 +28,38 @@ class MIDIConnection:
 
     TRIGGER_NOTE = 127
 
-    def __init__(self) -> None:
+    def __init__(self, port_name: str | None = None, hardware_dir: Path | None = None) -> None:
         self._port = None
         self._port_name: str | None = None
         self._connected = False
         self._error: str | None = None
+        self._preferred_port = port_name
 
-        self._hardware_dir = _get_fl_hardware_dir()
-        self._command_file = self._hardware_dir / "mcp_command.json"
-        self._response_file = self._hardware_dir / "mcp_response.json"
+        self._hardware_dir = paths.resolve_hardware_dir(create=True)
+        if hardware_dir is not None:
+            self._hardware_dir = Path(hardware_dir)
+        self._command_file = self._hardware_dir / paths.COMMAND_FILE
+        self._response_file = self._hardware_dir / paths.RESPONSE_FILE
+
+    @property
+    def port_name(self) -> str | None:
+        """Name of the MIDI port currently in use."""
+        return self._port_name
+
+    @property
+    def hardware_dir(self) -> Path:
+        """Folder used for the command/response files."""
+        return self._hardware_dir
+
+    def set_hardware_dir(self, hardware_dir: Path) -> None:
+        """Point the connection at another command/response folder."""
+        self._hardware_dir = Path(hardware_dir)
+        self._command_file = self._hardware_dir / paths.COMMAND_FILE
+        self._response_file = self._hardware_dir / paths.RESPONSE_FILE
+
+    def set_preferred_port(self, port_name: str | None) -> None:
+        """Force the MIDI port used for the next connection attempt."""
+        self._preferred_port = port_name
 
     @property
     def is_connected(self) -> bool:
@@ -198,6 +208,8 @@ class MIDIConnection:
             "connected": self.is_connected,
             "port_name": self._port_name,
             "available_ports": output_ports,
+            "hardware_dir": str(self._hardware_dir),
+            "hardware_dir_candidates": [str(p) for p in paths.candidate_directories()],
             "command_file": str(self._command_file),
             "response_file": str(self._response_file),
             "error": self._error,
