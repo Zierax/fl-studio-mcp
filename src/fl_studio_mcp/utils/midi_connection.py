@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -163,7 +164,11 @@ class MIDIConnection:
     ) -> dict[str, Any]:
         self.ensure_connected()
 
+        # The id lets the server recognise a late response that belongs to an
+        # earlier command instead of mistaking it for this one.
+        request_id = uuid.uuid4().hex
         command = {
+            "id": request_id,
             "action": action,
             "params": params or {},
         }
@@ -186,9 +191,9 @@ class MIDIConnection:
         except Exception as e:
             return {"success": False, "error": f"Failed to send MIDI trigger: {e}"}
 
-        return self._wait_for_response(timeout)
+        return self._wait_for_response(timeout, request_id)
 
-    def _wait_for_response(self, timeout: float) -> dict[str, Any]:
+    def _wait_for_response(self, timeout: float, request_id: str | None = None) -> dict[str, Any]:
         start_time = time.time()
         poll_interval = 0.05
         last_error: str | None = None
@@ -208,6 +213,17 @@ class MIDIConnection:
                     # The controller may still be writing the file; give it
                     # a moment before giving up.
                     last_error = f"Invalid JSON in response: {e}"
+                    time.sleep(poll_interval)
+                    continue
+
+                # A response that carries a different id belongs to an
+                # earlier command: keep waiting for the right one.
+                response_id = response.get("id") if isinstance(response, dict) else None
+                if (
+                    request_id is not None
+                    and response_id is not None
+                    and response_id != request_id
+                ):
                     time.sleep(poll_interval)
                     continue
 

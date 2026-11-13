@@ -27,9 +27,12 @@ class FakePort:
         self.name = name
         self.sent = []
         self.closed = False
+        self.on_send = None
 
     def send(self, message):
         self.sent.append(message)
+        if self.on_send is not None:
+            self.on_send(message)
 
     def close(self):
         self.closed = True
@@ -121,30 +124,55 @@ def test_command_roundtrip(connection, fake_mido):
     conn, hardware = connection
     conn.connect()
 
-    # Simulate the controller script answering the command.
-    def respond():
-        command_file = hardware / "mcp_command.json"
-        for _ in range(200):
-            if command_file.exists():
-                payload = json.loads(command_file.read_text(encoding="utf-8"))
-                (hardware / "mcp_response.json").write_text(
-                    json.dumps({"success": True, "echo": payload["action"]}),
-                    encoding="utf-8",
-                )
-                return
-        raise AssertionError("the command file was never written")
+    # The controller script answers the MIDI trigger, exactly like FL Studio
+    # does: the trigger arrives after the command file was written.
+    def respond(message):
+        payload = json.loads((hardware / "mcp_command.json").read_text(encoding="utf-8"))
+        (hardware / "mcp_response.json").write_text(
+            json.dumps({"success": True, "echo": payload["action"], "id": payload.get("id")}),
+            encoding="utf-8",
+        )
 
-    import threading
+    conn._port.on_send = respond
 
-    thread = threading.Thread(target=respond)
-    thread.start()
-    try:
-        result = conn.send_command("transport.start", {"x": 1}, timeout=5.0)
-    finally:
-        thread.join()
+    result = conn.send_command("transport.start", {"x": 1}, timeout=5.0)
 
     assert result["success"] is True
     assert result["echo"] == "transport.start"
+
+
+def test_response_carries_the_request_id(connection, fake_mido):
+    conn, hardware = connection
+    conn.connect()
+
+    def respond(message):
+        payload = json.loads((hardware / "mcp_command.json").read_text(encoding="utf-8"))
+        (hardware / "mcp_response.json").write_text(
+            json.dumps({"success": True, "id": payload.get("id")}),
+            encoding="utf-8",
+        )
+
+    conn._port.on_send = respond
+    result = conn.send_command("transport.start", {}, timeout=5.0)
+    assert result["id"]
+
+
+def test_a_late_response_is_not_accepted(connection, fake_mido):
+    """A response from an earlier command must not answer this one."""
+    conn, hardware = connection
+    conn.connect()
+
+    def respond(message):
+        # Answer with a foreign id, as a late response would.
+        (hardware / "mcp_response.json").write_text(
+            json.dumps({"success": True, "id": "not-my-request"}),
+            encoding="utf-8",
+        )
+
+    conn._port.on_send = respond
+    result = conn.send_command("transport.start", {}, timeout=0.5)
+    assert result["success"] is False
+    assert "Timeout" in result["error"]
 
 
 def test_command_file_is_utf8_encoded(connection, fake_mido):

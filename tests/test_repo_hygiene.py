@@ -46,7 +46,9 @@ def test_no_conflict_markers(filename):
     data = path.read_bytes()
     if b"\x00" in data:
         pytest.skip(f"{filename} is binary")
-    for marker in (b"<<<<<<< ", b">>>>>>> "):
+    # Built from parts so that this file does not trip its own check.
+    markers = (b"<" * 7 + b" ", b">" * 7 + b" ")
+    for marker in markers:
         assert marker not in data, f"{filename} contains a merge conflict marker"
 
 

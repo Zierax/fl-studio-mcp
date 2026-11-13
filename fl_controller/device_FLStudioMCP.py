@@ -44,7 +44,7 @@ import plugins
 import transport
 
 # Hot-reload marker. Bump this to make FL Studio reload the script.
-MCP_VERSION = 3
+MCP_VERSION = 4
 
 try:
     import general
@@ -646,8 +646,13 @@ def OnIdle():
 
 
 def execute_pending_command():
-    """Read command from JSON file, execute it, and write response."""
+    """Read command from JSON file, execute it, and write response.
+
+    The command carries an ``id`` that is echoed back in the response, so the
+    server can tell a fresh answer from a late one of an earlier command.
+    """
     response = {"success": False, "error": None}
+    request_id = None
 
     try:
         # Read command file
@@ -661,6 +666,7 @@ def execute_pending_command():
 
         action = command.get("action", "")
         params = command.get("params", {})
+        request_id = command.get("id")
 
         # Execute command and get result
         result = dispatch_command(action, params)
@@ -670,6 +676,9 @@ def execute_pending_command():
         response["error"] = f"Invalid JSON in command file: {e}"
     except Exception as e:
         response["error"] = f"Error executing command: {e}"
+
+    if request_id is not None:
+        response["id"] = request_id
 
     write_response(response)
 

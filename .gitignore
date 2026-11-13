@@ -1,9 +1,11 @@
 ﻿.venv/
 .claude/
-fl_controller/__pycache__/
-src/fl_studio_mcp/__pycache__/
-src/fl_studio_mcp/tools/__pycache__
-src/fl_studio_mcp/utils/__pycache__
 .ruff_cache/
 _temp/
 paper/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
