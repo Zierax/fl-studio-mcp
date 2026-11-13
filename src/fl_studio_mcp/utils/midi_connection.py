@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fl_studio_mcp.utils import paths
+from fl_studio_mcp.utils.ports import describe_choice, find_port
 
 
 class MIDIConnection:
@@ -34,6 +35,7 @@ class MIDIConnection:
         self._connected = False
         self._error: str | None = None
         self._preferred_port = port_name
+        self._port_is_guess = False
 
         self._hardware_dir = paths.resolve_hardware_dir(create=True)
         if hardware_dir is not None:
@@ -88,30 +90,35 @@ class MIDIConnection:
             return False
 
         if not output_ports:
-            self._error = "No MIDI output ports found."
+            self._error = (
+                "No MIDI output ports found. Create a virtual MIDI port "
+                "(loopMIDI on Windows, IAC Driver on macOS) and make sure "
+                "FL Studio listens on it."
+            )
             return False
 
-        target_port = None
-        for port_name in output_ports:
-            if "FLStudioMCP" in port_name:
-                target_port = port_name
-                break
-
-        # Fallback to loopMIDI if FLStudioMCP not found
+        target_port = find_port(output_ports, self._preferred_port)
         if target_port is None:
-            for port_name in output_ports:
-                if "loopMIDI" in port_name:
-                    target_port = port_name
-                    break
-
-        if target_port is None:
-            target_port = output_ports[0]
+            self._error = (
+                f"No MIDI port matching {self._preferred_port!r} was found. "
+                f"Available ports: {output_ports}"
+            )
+            return False
 
         try:
             self._port = mido.open_output(target_port)
             self._port_name = target_port
             self._connected = True
-            self._error = None
+            choice = describe_choice(output_ports, target_port)
+            self._port_is_guess = bool(choice["is_guess"])
+            if self._port_is_guess:
+                self._error = (
+                    f"Connected to {target_port!r}, but that port does not look "
+                    "like the FL Studio MCP bridge. If calls time out, select "
+                    "the virtual port FL Studio listens on explicitly."
+                )
+            else:
+                self._error = None
             return True
         except Exception as e:
             self._error = f"Failed to open MIDI port '{target_port}': {e}"
@@ -207,6 +214,8 @@ class MIDIConnection:
         return {
             "connected": self.is_connected,
             "port_name": self._port_name,
+            "port_is_guess": self._port_is_guess,
+            "preferred_port": self._preferred_port,
             "available_ports": output_ports,
             "hardware_dir": str(self._hardware_dir),
             "hardware_dir_candidates": [str(p) for p in paths.candidate_directories()],
