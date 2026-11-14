@@ -35,9 +35,18 @@ class FLConnection:
         self._midi = get_midi_connection()
         self._port_name = port_name
         self._hardware_dir = hardware_dir
+        self._apply_preferences()
+
+    def _apply_preferences(self) -> None:
+        """Push the requested port and folder down to the MIDI connection."""
+        if self._hardware_dir is not None:
+            self._midi.set_hardware_dir(Path(self._hardware_dir))
+        if self._port_name is not None:
+            self._midi.set_preferred_port(self._port_name)
 
     def ensure_connected(self) -> None:
         """Ensure connection to FL Studio is active. Raises RuntimeError if not."""
+        self._apply_preferences()
         self._midi.ensure_connected()
 
     def connect(
@@ -62,10 +71,7 @@ class FLConnection:
 
         # A different port or folder requires a fresh connection.
         self._midi.disconnect()
-        if wanted_dir is not None:
-            self._midi.set_hardware_dir(Path(wanted_dir))
-        if wanted_port is not None:
-            self._midi.set_preferred_port(wanted_port)
+        self._apply_preferences()
         return self._midi.connect()
 
     @property
