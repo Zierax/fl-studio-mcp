@@ -9,6 +9,7 @@ fl_controller/device_FLStudioMCP.py   ← runs INSIDE FL Studio (the "remote")
 src/fl_studio_mcp/tools/*.py          ← one file per tool group (the "client")
 src/fl_studio_mcp/utils/              ← MIDI + JSON bridge
 src/fl_studio_mcp/server.py           ← MCP entry point
+tests/                                ← pytest suite (no FL Studio needed)
 ```
 
 The interesting rule: **tools are thin wrappers**. The real work happens in
@@ -41,7 +42,7 @@ Copy the file to FL's `Settings/Hardware/FLStudioMCP/` — **and bump the
 version marker** so FL Studio reloads it:
 
 ```python
-MCP_VERSION = 2   # was 1
+MCP_VERSION = 4   # was 3
 ```
 
 No restart needed; the script hot-reloads on its 1-second idle tick.
@@ -61,15 +62,41 @@ def fl_get_last_peak(channel: int) -> float:
 Make sure the `register_*_tools(mcp, conn)` function includes it, then `uv
 sync && uv run fl-studio-mcp` to smoke-test.
 
+## Running the tests
+
+```bash
+uv sync
+uv run pytest
+```
+
+The suite needs neither FL Studio nor a MIDI driver:
+
+| File | What it covers |
+|------|----------------|
+| `tests/test_device_script.py` | Loads the controller script with `json`, `os`, `pathlib`, `importlib` … blocked — the FL Studio 21 environment — and exercises dispatch, path discovery and the diagnostics action. |
+| `tests/test_json_codec.py` | The self-contained JSON codec, compared byte-for-byte against the standard library. |
+| `tests/test_ports.py` | MIDI port scoring (a software synth must never win over the bridge). |
+| `tests/test_paths.py` | Resolution of FL Studio's hardware folder, including OneDrive redirection and the env override. |
+| `tests/test_midi_connection.py` | The command/response round-trip with a fake `mido`. |
+| `tests/test_server.py` | The MCP server boots and exposes the documented tools. |
+| `tests/test_docs.py` | The docs: valid JSON snippets, no hard coded local paths, no broken links, consistent versions. |
+
+`tests/conftest.py` holds the fixtures — most importantly the stub FL API
+modules and the import blocker that reproduces FL Studio's stripped
+interpreter.
+
 ## Testing against a live FL Studio
 
-There is no meaningful unit test without the DAW; the project's test flow is:
+Unit tests cannot tell you whether FL Studio actually reacted, so the manual
+flow is:
 
 1. Open a scratch project in FL Studio (or use your working one).
 2. Connect (`fl_connect`), then exercise the new tool.
 3. Watch `Script output` in FL Studio for controller errors.
 4. If the controller script changed, verify the reload printout:
    `[MCP] hot-reloaded to version N`.
+5. Run `fl_diagnostics` to confirm both halves agree on the port and the
+   command folder.
 
 ## Versioning & releases
 
@@ -108,11 +135,13 @@ Notes:
 
 - `ruff` is configured in `pyproject.toml` (line-length 100):
   ```bash
-  uv run ruff check src/ fl_controller/device_FLStudioMCP.py
+  uv run ruff check src/ tests/ fl_controller/device_FLStudioMCP.py
   ```
-- The controller script runs inside a sandboxed Python (FL Studio's) — keep
-  it to stdlib + FL modules only. No external pip deps in
-  `fl_controller/`.
+- The controller script runs inside FL Studio's **stripped** Python — it may
+  use **builtins only** (`sys`, `time` and the FL modules). No standard
+  library module (`json`, `os`, `pathlib`, `importlib`, ...) and no external
+  pip dependency in `fl_controller/`. `tests/test_device_script.py` fails the
+  build if that rule is broken.
 - All client tools return JSON-safe types (dicts, lists, floats, strings).
 - User-facing tool descriptions should state units (0.0–1.0, 0-based index)
   so models don't guess.

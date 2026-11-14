@@ -15,8 +15,12 @@ Conventions:
 
 | Tool | Description |
 |------|-------------|
-| `fl_connect` | Find and open the MIDI port that triggers FL Studio; say the port name to force it |
-| `fl_connection_status` | Whether the bridge is connected and the port used |
+| `fl_connect` | Find and open the MIDI port that triggers FL Studio. Optional arguments: `port_name` (force an exact MIDI port, e.g. `"FLStudioMCP 1"`) and `data_dir` (the folder that holds `mcp_command.json` / `mcp_response.json`) |
+| `fl_connection_status` | Whether the bridge is connected, the port used, whether the port was a guess, and every folder candidate that was considered |
+| `fl_diagnostics` | Full diagnosis in one call: the server side view (MIDI port, command folder) plus the controller's own report (FL API version, which modules the embedded Python can import, the paths it resolved) |
+
+Start with `fl_diagnostics` when the bridge misbehaves — it answers most of
+the questions in [TROUBLESHOOTING.md](TROUBLESHOOTING.md) in one shot.
 
 ## Transport
 

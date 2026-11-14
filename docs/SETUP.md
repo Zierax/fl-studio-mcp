@@ -7,7 +7,8 @@ covered below for Windows and macOS.
 ## Prerequisites
 
 - **FL Studio 20.7+** — the MIDI controller scripting API is required.
-  The project has been tested on FL Studio 2025 (Windows).
+  The project has been tested on FL Studio 2025 (Windows) and FL Studio
+  21.0.3 (Windows).
 - **Python 3.10+**
 - **[uv](https://github.com/astral-sh/uv)** — installs dependencies and runs
   the server (avoid polluting your system Python).
@@ -17,6 +18,10 @@ covered below for Windows and macOS.
     auto-names ports `FLStudioMCP 0`, `FLStudioMCP 1`, etc.
   - macOS: IAC Driver — enable it in **Applications → Utilities → Audio MIDI
     Setup → IAC Driver → double-click → "Device is online"**.
+
+> **FL Studio 21 and older need no extra setup.** Those versions embed a
+> Python interpreter without the standard library; the controller script works
+> around that internally (no `json`, `os` or `pathlib` imports).
 
 ## Option A — Installer (recommended)
 
@@ -109,13 +114,14 @@ Claude Code: `~/.claude.json` under `mcpServers`):
   "mcpServers": {
     "fl-studio": {
       "command": "uv",
-      "args": ["run", "--directory", "D:\\Axioms\\FL-MCP", "fl-studio-mcp"]
+      "args": ["run", "--directory", "/path/to/FL-MCP", "fl-studio-mcp"]
     }
   }
 }
 ```
 
-- On macOS/Linux use `/path/to/FL-MCP` instead of a Windows path.
+- Replace `/path/to/FL-MCP` with the folder you cloned into. On Windows use
+  escaped backslashes, e.g. `"D:\\Projects\\FL-MCP"`.
 - Any MCP-capable client (Claude, Cursor, VS Code Copilot, etc.) can use the
   same `command`/`args` pair — just restart the client after editing.
 
@@ -131,16 +137,21 @@ Then, in your MCP client, ask something like:
 
 > "Connect to FL Studio and show me the current tempo and transport state."
 
-If that works, the bridge is live. If not, see
-[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+If that works, the bridge is live. If not, ask for `fl_diagnostics` — it
+reports the MIDI port, the command folder and the FL Studio API version — and
+see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## Notes
 
-- The server uses `fl_connect` automatically via the fallback port list; the
-  first successful MIDI port wins. See `src/fl_studio_mcp/utils/midi_connection.py`.
+- The server picks the MIDI port automatically: ports named after the bridge
+  (`FLStudioMCP`, `FL Studio MCP`) win over software synths. If the choice is
+  wrong, call `fl_connect(port_name="FLStudioMCP 1")` to force it.
+- The server locates FL Studio's `Hardware/FLStudioMCP/` folder by itself. If
+  you moved FL Studio's user data folder, set `FL_STUDIO_MCP_DIR` to the
+  folder that holds `mcp_command.json`, or pass `data_dir` to `fl_connect`.
 - The controller script hot-reloads itself every second — editing
   `device_FLStudioMCP.py` on disk is enough; no `Update MIDI scripts` needed
   (it re-imports when the version marker changes, see
-  [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)).
+  [DEVELOPMENT.md](DEVELOPMENT.md)).
 - JSON files `mcp_command.json` / `mcp_response.json` are created inside
   `Settings/Hardware/FLStudioMCP/` at runtime — that is normal, not trash.

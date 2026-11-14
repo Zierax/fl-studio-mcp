@@ -1,0 +1,648 @@
+{
+  "scenario": "SPIDER CROWN (dark trap, PLAN.md)",
+  "date": "2026-08-17T23:45:42+00:00",
+  "tempo_bpm": 145.0,
+  "original_bpm": 0.0,
+  "calls": 51,
+  "successes": 0,
+  "failures": 23,
+  "failure_checks": [
+    {
+      "check": "expected channels present",
+      "detail": "channels found: []"
+    },
+    {
+      "check": "tempo set to 145",
+      "detail": "read-back None"
+    },
+    {
+      "check": "patterns.create INTRO",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create HOOK",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create VERSE",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create BREAK",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create HOOKB",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create VERSEB",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "patterns.create OUTRO",
+      "detail": "{'success': False, 'error': 'Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings.'}"
+    },
+    {
+      "check": "mixer track 1 name",
+      "detail": "expected Kick, got None"
+    },
+    {
+      "check": "mixer track 1 volume",
+      "detail": "expected 0.95, got None"
+    },
+    {
+      "check": "mixer track 2 name",
+      "detail": "expected Clap, got None"
+    },
+    {
+      "check": "mixer track 2 volume",
+      "detail": "expected 0.8, got None"
+    },
+    {
+      "check": "mixer track 3 name",
+      "detail": "expected Hat, got None"
+    },
+    {
+      "check": "mixer track 3 volume",
+      "detail": "expected 0.65, got None"
+    },
+    {
+      "check": "mixer track 4 name",
+      "detail": "expected Snare, got None"
+    },
+    {
+      "check": "mixer track 4 volume",
+      "detail": "expected 0.85, got None"
+    },
+    {
+      "check": "mixer track 5 name",
+      "detail": "expected Bass, got None"
+    },
+    {
+      "check": "mixer track 5 volume",
+      "detail": "expected 1.0, got None"
+    },
+    {
+      "check": "mixer track 6 name",
+      "detail": "expected FX, got None"
+    },
+    {
+      "check": "mixer track 6 volume",
+      "detail": "expected 0.8, got None"
+    },
+    {
+      "check": "mixer track 7 name",
+      "detail": "expected Sub, got None"
+    },
+    {
+      "check": "mixer track 7 volume",
+      "detail": "expected 0.9, got None"
+    }
+  ],
+  "pattern_indices": {},
+  "patterns_total": null,
+  "latency_ms": {
+    "p50": 5020.927,
+    "max": 5051.447
+  },
+  "channel_counts": {
+    "channels.setSteps": 0,
+    "channels.getSteps": 0,
+    "patterns.create": 7,
+    "patterns.setLength": 0,
+    "mixer.setTrackName": 7
+  },
+  "snapshot_before": {
+    "success": false,
+    "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+  },
+  "snapshot_after": {
+    "success": false,
+    "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+  },
+  "log": [
+    {
+      "ts": "2026-08-17T23:41:26.727+00:00",
+      "call": "transport.getStatus",
+      "params": {},
+      "success": false,
+      "latency_ms": 5034.122,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:31.752+00:00",
+      "call": "transport.getTempo",
+      "params": {},
+      "success": false,
+      "latency_ms": 5024.747,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:36.768+00:00",
+      "call": "channels.getAll",
+      "params": {},
+      "success": false,
+      "latency_ms": 5015.841,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:41.778+00:00",
+      "call": "project.snapshot",
+      "params": {
+        "include_playlist": false
+      },
+      "success": false,
+      "latency_ms": 5010.273,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:46.797+00:00",
+      "call": "tempo.set",
+      "params": {
+        "tempo": 145.0
+      },
+      "success": false,
+      "latency_ms": 5018.562,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:51.813+00:00",
+      "call": "transport.getTempo",
+      "params": {},
+      "success": false,
+      "latency_ms": 5015.709,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:41:56.864+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "INTRO"
+      },
+      "success": false,
+      "latency_ms": 5051.378,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:01.900+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "HOOK"
+      },
+      "success": false,
+      "latency_ms": 5035.393,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:06.946+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "VERSE"
+      },
+      "success": false,
+      "latency_ms": 5046.255,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:11.967+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "BREAK"
+      },
+      "success": false,
+      "latency_ms": 5018.827,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:16.990+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "HOOKB"
+      },
+      "success": false,
+      "latency_ms": 5023.167,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:22.035+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "VERSEB"
+      },
+      "success": false,
+      "latency_ms": 5044.531,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:27.059+00:00",
+      "call": "patterns.create",
+      "params": {
+        "name": "OUTRO"
+      },
+      "success": false,
+      "latency_ms": 5023.541,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:36.677+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 1,
+        "name": "Kick"
+      },
+      "success": false,
+      "latency_ms": 5034.273,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:41.694+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 1,
+        "value": 0.95
+      },
+      "success": false,
+      "latency_ms": 5016.504,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:46.727+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 1,
+        "value": 0.0
+      },
+      "success": false,
+      "latency_ms": 5032.491,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:51.747+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 2,
+        "name": "Clap"
+      },
+      "success": false,
+      "latency_ms": 5020.165,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:42:56.765+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 2,
+        "value": 0.8
+      },
+      "success": false,
+      "latency_ms": 5017.939,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:01.817+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 2,
+        "value": -0.05
+      },
+      "success": false,
+      "latency_ms": 5051.447,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:06.839+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 3,
+        "name": "Hat"
+      },
+      "success": false,
+      "latency_ms": 5021.802,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:11.847+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 3,
+        "value": 0.65
+      },
+      "success": false,
+      "latency_ms": 5009.619,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:16.886+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 3,
+        "value": 0.12
+      },
+      "success": false,
+      "latency_ms": 5037.712,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:21.931+00:00",
+      "call": "mixer.setStereoSep",
+      "params": {
+        "track": 3,
+        "separation": 0.3
+      },
+      "success": false,
+      "latency_ms": 5044.228,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:26.945+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 4,
+        "name": "Snare"
+      },
+      "success": false,
+      "latency_ms": 5014.103,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:31.958+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 4,
+        "value": 0.85
+      },
+      "success": false,
+      "latency_ms": 5013.115,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:36.986+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 4,
+        "value": 0.03
+      },
+      "success": false,
+      "latency_ms": 5027.046,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:42.008+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 5,
+        "name": "Bass"
+      },
+      "success": false,
+      "latency_ms": 5022.398,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:47.029+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 5,
+        "value": 1.0
+      },
+      "success": false,
+      "latency_ms": 5020.927,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:52.061+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 5,
+        "value": 0.0
+      },
+      "success": false,
+      "latency_ms": 5031.762,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:43:57.090+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 6,
+        "name": "FX"
+      },
+      "success": false,
+      "latency_ms": 5028.603,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:02.108+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 6,
+        "value": 0.8
+      },
+      "success": false,
+      "latency_ms": 5018.371,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:07.125+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 6,
+        "value": 0.0
+      },
+      "success": false,
+      "latency_ms": 5017.208,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:12.147+00:00",
+      "call": "mixer.setTrackName",
+      "params": {
+        "track": 7,
+        "name": "Sub"
+      },
+      "success": false,
+      "latency_ms": 5021.685,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:17.177+00:00",
+      "call": "mixer.setTrackVolume",
+      "params": {
+        "track": 7,
+        "value": 0.9
+      },
+      "success": false,
+      "latency_ms": 5029.566,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:22.200+00:00",
+      "call": "mixer.setTrackPan",
+      "params": {
+        "track": 7,
+        "value": 0.0
+      },
+      "success": false,
+      "latency_ms": 5022.41,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:27.213+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 1
+      },
+      "success": false,
+      "latency_ms": 5013.313,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:32.231+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 1
+      },
+      "success": false,
+      "latency_ms": 5017.923,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:37.247+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 2
+      },
+      "success": false,
+      "latency_ms": 5013.071,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:42.253+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 2
+      },
+      "success": false,
+      "latency_ms": 5006.349,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:47.303+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 3
+      },
+      "success": false,
+      "latency_ms": 5049.913,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:52.310+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 3
+      },
+      "success": false,
+      "latency_ms": 5007.003,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:44:57.317+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 4
+      },
+      "success": false,
+      "latency_ms": 5006.397,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:02.341+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 4
+      },
+      "success": false,
+      "latency_ms": 5023.998,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:07.354+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 5
+      },
+      "success": false,
+      "latency_ms": 5012.799,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:12.369+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 5
+      },
+      "success": false,
+      "latency_ms": 5014.556,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:17.381+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 6
+      },
+      "success": false,
+      "latency_ms": 5012.335,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:22.399+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 6
+      },
+      "success": false,
+      "latency_ms": 5017.55,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:27.418+00:00",
+      "call": "mixer.getTrackName",
+      "params": {
+        "track": 7
+      },
+      "success": false,
+      "latency_ms": 5018.538,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:32.438+00:00",
+      "call": "mixer.getTrackVolume",
+      "params": {
+        "track": 7
+      },
+      "success": false,
+      "latency_ms": 5019.626,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:37.461+00:00",
+      "call": "project.snapshot",
+      "params": {
+        "include_playlist": false
+      },
+      "success": false,
+      "latency_ms": 5023.693,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    },
+    {
+      "ts": "2026-08-17T23:45:42.493+00:00",
+      "call": "patterns.count",
+      "params": {},
+      "success": false,
+      "latency_ms": 5031.625,
+      "error": "Timeout waiting for FL Studio response after 5.0s. Make sure FL Studio is running and the MCP controller is enabled in MIDI Settings."
+    }
+  ]
+}

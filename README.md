@@ -5,7 +5,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets AI assistants
 patterns, step sequencer, piano roll, and the entire FL scripting API —
 over a virtual MIDI trigger + JSON command channel.
 
-> **Version 1.1.1** · MIT License · © 2026 Ziad Salah (Zierax)
+> **Version 1.2.0** · MIT License · © 2026 Ziad Salah (Zierax)
 
 [![Listed on MCP Market](https://mcpmarket.com/badge/server/fl-studio-3.svg)](https://mcpmarket.com/server/fl-studio-3?utm_source=readme&utm_medium=badge)
 
@@ -45,12 +45,18 @@ MCP client (Claude, Cursor, ...)
 
 ## Requirements
 
-- **FL Studio 20.7+** on Windows or macOS (tested on FL Studio 2025 / Windows)
+- **FL Studio 20.7+** on Windows or macOS (tested on FL Studio 2025 / Windows
+  and FL Studio 21.0.3 / Windows)
 - **Python 3.10+**
 - **[uv](https://github.com/astral-sh/uv)** (recommended package manager)
 - A virtual MIDI port:
   - Windows: [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)
   - macOS: IAC Driver (enable it in Audio MIDI Setup)
+
+> **FL Studio 21 and older:** FL Studio embeds a *stripped* CPython interpreter
+> without the standard library, so the controller script uses nothing but
+> builtins — no `json`, `os`, `pathlib` or `importlib`. Nothing extra has to be
+> installed for those versions.
 
 ## Quick start
 
@@ -79,19 +85,24 @@ Run the installer, or copy `fl_controller/device_FLStudioMCP.py` manually (see
 
 ### 3. Connect the server
 
+Add this to your MCP client's configuration file (Claude Desktop:
+`claude_desktop_config.json`; Claude Code: `~/.claude.json`):
+
 ```json
 {
   "mcpServers": {
     "fl-studio": {
       "command": "uv",
-      "args": ["run", "--directory", "D:\\Axioms\\FL-MCP", "fl-studio-mcp"]
+      "args": ["run", "--directory", "/path/to/FL-MCP", "fl-studio-mcp"]
     }
   }
 }
 ```
 
-Adjust `--directory` to your clone (or `/path/to/FL-MCP` on macOS/Linux).
-The server is a standard stdio MCP server — any MCP client can use it.
+Replace `/path/to/FL-MCP` with the folder you cloned the repository into. On
+Windows use a path with escaped backslashes, e.g.
+`"D:\\Projects\\FL-MCP"`. The server is a standard stdio MCP server — any MCP
+client can use it.
 
 Then talk to it in natural language:
 
@@ -100,6 +111,12 @@ Then talk to it in natural language:
 > "Program a kick on steps 0, 4, 8, 12 of channel 0 and a snare on steps 4 and 12 of channel 1."
 
 > "Set mixer track 3 volume to 80%, pan it slightly left, and solo track 1."
+
+### 4. Check the bridge
+
+Ask your client to run `fl_diagnostics`. It reports the MIDI port in use, the
+folder the command files live in, and the FL Studio API version — the fastest
+way to see what is misconfigured.
 
 ## Documentation
 
@@ -112,7 +129,7 @@ Everything lives in [docs/](docs/):
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How the MIDI + JSON bridge and hot-reload work |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Fixes for the problems people actually hit |
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What the FL Studio API can and cannot do |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Adding tools, versioning, releasing |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Adding tools, versioning, testing, releasing |
 | [docs/MENTION.md](docs/MENTION.md) | Credits and backbone projects |
 
 ## Known limitations (summary)
@@ -133,13 +150,25 @@ fl_controller/
   device_FLStudioMCP.py   ← the script that runs inside FL Studio (hot-reloadable)
 src/fl_studio_mcp/
   server.py               ← MCP entry point + connection tools
-  utils/                  ← MIDI trigger, JSON command channel, connection
+  utils/                  ← MIDI trigger, JSON command channel, connection,
+                            port scoring, path resolution
   tools/                  ← 9 tool groups: transport, mixer, channels, patterns,
                              plugins, sequencer, piano_roll, advanced, fullcontrol
 scripts/                  ← installer helpers (.pyscript legacy, .ps1/.sh)
+tests/                    ← pytest suite (controller script, JSON codec, ports)
 docs/                     ← this documentation
 install.ps1 / install.sh  ← one-command installers
 ```
+
+## Development
+
+```bash
+uv sync
+uv run pytest            # unit tests (no FL Studio required)
+uv run ruff check src/ tests/ fl_controller/device_FLStudioMCP.py
+```
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full workflow.
 
 ## Credits
 
