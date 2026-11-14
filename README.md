@@ -132,6 +132,25 @@ Everything lives in [docs/](docs/):
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Adding tools, versioning, testing, releasing |
 | [docs/MENTION.md](docs/MENTION.md) | Credits and backbone projects |
 
+## AI prompt pack
+
+[prompts/](prompts/) turns the server into a producer rather than a command
+runner: a standing directive, the tool map and read-back pairings, the
+nine-phase production workflow, style specs for twelve genres, and
+checkable quality gates.
+
+| File | What it does |
+|------|--------------|
+| [prompts/CORE.md](prompts/CORE.md) | The standing directive — role, verification invariant, creative rules |
+| [prompts/BRIDGE.md](prompts/BRIDGE.md) | Tool map, FL API limits, failure branches, recovery |
+| [prompts/WORKFLOW.md](prompts/WORKFLOW.md) | The nine production phases, with a gate at the end of each |
+| [prompts/RECIPE.md](prompts/RECIPE.md) | The style card and a worked example |
+| [prompts/GENRES.md](prompts/GENRES.md) | Twelve style specs with real numbers |
+| [prompts/ARRANGEMENT.md](prompts/ARRANGEMENT.md) | Energy curves, section lengths, layer logic, hooks |
+| [prompts/THEORY.md](prompts/THEORY.md) | Key and mode, bass writing, melody craft |
+| [prompts/MIXING.md](prompts/MIXING.md) | Balance → pan → routing → EQ → FX → automation → loudness |
+| [prompts/QC.md](prompts/QC.md) | Quality gates and the diagnostic table for a weak result |
+
 ## Known limitations (summary)
 
 - The FL Studio scripting API **cannot create channels or load audio files** —
@@ -154,8 +173,10 @@ src/fl_studio_mcp/
                             port scoring, path resolution
   tools/                  ← 9 tool groups: transport, mixer, channels, patterns,
                              plugins, sequencer, piano_roll, advanced, fullcontrol
-scripts/                  ← installer helpers (.pyscript legacy, .ps1/.sh)
-tests/                    ← pytest suite (controller script, JSON codec, ports)
+scripts/                  ← installer helpers, scenario harness, benchmark
+prompts/                  ← the AI prompt pack (directive, workflow, styles, gates)
+tests/                    ← pytest suite (controller script, JSON codec, ports, prompts)
+logs/                     ← run artifacts: execution logs, scenario and benchmark reports
 docs/                     ← this documentation
 install.ps1 / install.sh  ← one-command installers
 ```
