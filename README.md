@@ -131,6 +131,7 @@ Everything lives in [docs/](docs/):
 | [docs/LIMITATIONS.md](docs/LIMITATIONS.md) | What the FL Studio API can and cannot do |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Adding tools, versioning, testing, releasing |
 | [docs/MENTION.md](docs/MENTION.md) | Credits and backbone projects |
+| [CHANGELOG.md](CHANGELOG.md) | What changed in each release |
 
 ## AI prompt pack
 
