@@ -71,6 +71,23 @@ which is independent of the package version — see
 - `docs/DEVELOPMENT.md` describes the versioning accurately and lists the
   checks a release has to pass.
 
+## [v1.1.1] — 2026-08-18
+
+### Fixed
+
+- Removed a duplicate `fl_channel_step_param` registration.
+
+## [v1.1.0] — 2026-08-17
+
+### Added
+
+- The first AI prompt pack: `MAIN.md`, `WORKFLOW.md` and `STYLES.md`.
+
+### Fixed
+
+- Tempo units in the transport handlers (EPB vs BPM) and the
+  `raw.call` result key.
+
 ## [v1.0.0] — 2026-08-17
 
 - First public release: the full FL Studio scripting surface (transport,
@@ -79,5 +96,7 @@ which is independent of the package version — see
   configuration.
 
 [Unreleased]: https://github.com/Zierax/fl-studio-mcp/compare/v1.2.0...HEAD
-[v1.2.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1.0.0...v1.2.0
+[v1.2.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1.1.1...v1.2.0
+[v1.1.1]: https://github.com/Zierax/fl-studio-mcp/compare/v1.1.0...v1.1.1
+[v1.1.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1...v1.1.0
 [v1.0.0]: https://github.com/Zierax/fl-studio-mcp/releases/tag/v1
