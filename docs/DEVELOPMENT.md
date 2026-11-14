@@ -100,26 +100,34 @@ flow is:
 
 ## Versioning & releases
 
-The project uses **semantic versioning with a single v-prefixed tag**.
-Examples: `v1`, `v1.1`, `v2` — and no 10/11-style ad-hoc numbers anywhere.
+The package uses **semantic versioning** and every release is a `v`-prefixed
+git tag: `v1.2.0`, `v1.3.0`, …
 
-Three version numbers exist; keep them in sync:
+Three version numbers exist, and they play different roles:
 
-| Where | What it is |
-|-------|------------|
-| `fl_controller/device_FLStudioMCP.py` → `MCP_VERSION` | The hot-reload marker. **Must change on every controller edit.** Use the same number as the tag (`1`, `1.1`, ...). |
-| `pyproject.toml` → `version` | The Python package version (`1.1.1`). |
-| Git tag | The release, e.g. `v1`. |
+| Where | What it is | Rule |
+|-------|------------|------|
+| `fl_controller/device_FLStudioMCP.py` → `MCP_VERSION` | The hot-reload marker — a plain integer counter | **Must change on every controller edit.** It only has to *increase*; it is not tied to the package version. |
+| `pyproject.toml` → `version` | The package version (semver) | Bump it for a release. `tests/test_docs.py` fails if the README disagrees. |
+| Git tag | The release | Always `v<package version>`. |
+
+The hot-reload marker is deliberately a separate counter: the controller
+script is a file that people copy into FL Studio by hand, so it needs a
+number that changes on *every* edit, while the package version only moves
+on a release.
 
 Release checklist:
 
 ```bash
-# 1. bump MCP_VERSION in device_FLStudioMCP.py + version in pyproject.toml
-# 2. update docs if the tool surface changed (docs/TOOLS.md!)
+# 1. bump MCP_VERSION in device_FLStudioMCP.py
+# 2. bump version in pyproject.toml + the version line in README.md
+# 3. update docs if the tool surface changed (docs/TOOLS.md!)
 uv sync                       # keep the lockfile fresh
-uv run fl-studio-mcp          # boots? then:
-git add -A && git commit -m "release: v1"
-git tag v1                    # tag the release
+uv run pytest                 # the suite must pass
+uv run ruff check src/ tests/ fl_controller/device_FLStudioMCP.py
+uv run fl-studio-mcp          # boots?
+git add -A && git commit -m "release: v1.2.0"
+git tag -a v1.2.0 -m "v1.2.0"
 git push origin master --tags # then publish a GitHub release from the tag
 ```
 
@@ -129,7 +137,8 @@ Notes:
   code and the symptoms look like "FL ignores everything".
 - Keep `docs/TOOLS.md` accurate; it is the contract users rely on.
 - Personal/dev scratch scripts do **not** belong in this repo — keep them
-  outside (e.g. a `FL-MCP-DEV` folder) so the release stays clean.
+  outside (e.g. a `FL-MCP-DEV` folder) so the release stays clean. Generated
+  run artifacts belong in `logs/`.
 
 ## Coding style
 
