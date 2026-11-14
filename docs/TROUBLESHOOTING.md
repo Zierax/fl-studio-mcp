@@ -34,7 +34,7 @@ well as on FL Studio 2025. Nothing has to be installed.
 
 If you still see this error, an **old copy of the script** is running:
 
-1. Check **View → Script output**: the banner must say `MCP_VERSION: 4`.
+1. Check **View → Script output**: the banner must say `MCP_VERSION: 5`.
    Versions 2 and older imported `json` and fail on FL Studio 21.
 2. Copy the current `fl_controller/device_FLStudioMCP.py` over the one in
    `Settings/Hardware/FLStudioMCP/`.
@@ -123,7 +123,7 @@ working. If only some tools fail, check the **Script output** pane:
 The script hot-reloads only when the version marker changed:
 
 ```
-MCP_VERSION = 4
+MCP_VERSION = 5
 ```
 
 If you edit the file but reuse the same version number, FL Studio keeps the

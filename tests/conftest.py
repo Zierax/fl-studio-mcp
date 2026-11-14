@@ -121,33 +121,42 @@ def restore_modules(state) -> None:
 
 
 class BlockedImports:
-    """Context manager that hides modules from ``import`` statements."""
+    """Context manager that hides modules from ``import`` statements.
 
-    def __init__(self, blocked: tuple[str, ...]) -> None:
+    The block can be limited to a set of namespaces: only imports issued
+    *from* those modules are rejected, so the rest of the process (pytest
+    itself, for instance) keeps working.
+    """
+
+    def __init__(
+        self,
+        blocked: tuple[str, ...],
+        namespaces: tuple[dict, ...] | None = None,
+    ) -> None:
         self.blocked = blocked
+        self.namespaces = namespaces
         self._original_import = builtins.__import__
-        self._saved: dict[str, types.ModuleType | None] = {}
 
     def _fake_import(self, name, globals=None, locals=None, fromlist=(), level=0):
         root = name.split(".")[0]
-        if root in self.blocked:
+        if root in self.blocked and self._guards(globals):
             raise ModuleNotFoundError(f"No module named {root!r}", name=name)
         return self._original_import(name, globals, locals, fromlist, level)
 
+    def _guards(self, globals) -> bool:
+        """Return True when an import from *globals* must be blocked."""
+        if self.namespaces is None:
+            return True
+        if globals is None:
+            return False
+        return any(globals is namespace for namespace in self.namespaces)
+
     def __enter__(self) -> "BlockedImports":
-        for name in self.blocked:
-            self._saved[name] = sys.modules.get(name)
-            sys.modules.pop(name, None)
         builtins.__import__ = self._fake_import
         return self
 
     def __exit__(self, *exc_info) -> None:
         builtins.__import__ = self._original_import
-        for name, module in self._saved.items():
-            if module is None:
-                sys.modules.pop(name, None)
-            else:
-                sys.modules[name] = module
 
 
 def load_device_script(blocked: tuple[str, ...] = FL_UNAVAILABLE_MODULES):

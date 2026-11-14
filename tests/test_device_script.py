@@ -172,6 +172,33 @@ def test_command_response_roundtrip(device_module, tmp_path, monkeypatch):
     assert "is_playing" in response
 
 
+def test_a_failing_command_is_not_reported_as_successful(device_module, tmp_path, monkeypatch):
+    """An error from the handler must set success to False.
+
+    The tools on the server side check ``success`` before they look at
+    ``error``; reporting success for a failed command would hide every
+    failure.
+    """
+    hardware = tmp_path / "FLStudioMCP"
+    hardware.mkdir()
+    command_file = hardware / "mcp_command.json"
+    response_file = hardware / "mcp_response.json"
+
+    monkeypatch.setattr(device_module, "COMMAND_FILE", str(command_file))
+    monkeypatch.setattr(device_module, "RESPONSE_FILE", str(response_file))
+
+    command_file.write_text(
+        json.dumps({"action": "does.not.exist", "params": {}}),
+        encoding="utf-8",
+    )
+
+    device_module.execute_pending_command()
+
+    response = json.loads(response_file.read_text(encoding="utf-8"))
+    assert response["success"] is False
+    assert "Unknown action" in response["error"]
+
+
 def test_command_response_reports_invalid_json(device_module, tmp_path, monkeypatch):
     hardware = tmp_path / "FLStudioMCP"
     hardware.mkdir()

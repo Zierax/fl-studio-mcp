@@ -44,7 +44,7 @@ import plugins
 import transport
 
 # Hot-reload marker. Bump this to make FL Studio reload the script.
-MCP_VERSION = 4
+MCP_VERSION = 5
 
 try:
     import general
@@ -668,9 +668,14 @@ def execute_pending_command():
         params = command.get("params", {})
         request_id = command.get("id")
 
-        # Execute command and get result
+        # Execute command and get result.  A handler that reports an error
+        # did *not* succeed, so the flag has to say so -- the tools on the
+        # server side check `success` before they look at `error`.
         result = dispatch_command(action, params)
-        response = {"success": True, **result}
+        if isinstance(result, dict) and result.get("error"):
+            response = {"success": False, "error": result["error"], **result}
+        else:
+            response = {"success": True, **result}
 
     except _JsonError as e:
         response["error"] = f"Invalid JSON in command file: {e}"
