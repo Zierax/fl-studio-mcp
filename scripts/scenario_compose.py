@@ -5,7 +5,7 @@ Drives a live FL Studio session through the bridge channel, composing a
 (INTRO, HOOK, VERSE, BREAK, HOOKB, VERSEB, OUTRO), step-sequencer drums and
 bass, a piano-roll lead, and a mixer balance. Every write is verified by a
 read-back, every call is logged, and a JSON report plus an execution log are
-written to docs/.
+written to logs/.
 
 Usage:
     python scripts/scenario_compose.py [--out DIR]
@@ -190,11 +190,11 @@ def _bass_entries(bars: list) -> list[dict]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=None, help="output directory (default: repo docs/)")
+    ap.add_argument("--out", default=None, help="output directory (default: repo logs/)")
     args = ap.parse_args()
 
     repo = Path(__file__).resolve().parent.parent
-    out_dir = Path(args.out) if args.out else repo / "docs"
+    out_dir = Path(args.out) if args.out else repo / "logs"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     conn = get_connection()
