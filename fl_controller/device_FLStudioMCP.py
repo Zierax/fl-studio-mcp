@@ -44,7 +44,7 @@ import plugins
 import transport
 
 # Hot-reload marker. Bump this to make FL Studio reload the script.
-MCP_VERSION = 5
+MCP_VERSION = 6
 
 try:
     import general
@@ -85,6 +85,16 @@ try:
     import time as _time
 except ImportError:  # pragma: no cover - `time` is built into FL's interpreter
     _time = None
+
+# FL Studio's interpreter does not always expose `open()` in `builtins`
+# (FL Studio 21 does not), but the `_io` module it is built from is always
+# there.  Prefer `_io.open` and fall back to the builtin.
+try:
+    import _io
+
+    _open = _io.open
+except ImportError:  # pragma: no cover
+    _open = open
 
 
 # =============================================================================
@@ -460,6 +470,87 @@ def _json_loads(text):
 
 
 # =============================================================================
+# RESPONSE CHANNELS
+#
+# A response has to get from inside FL Studio back to the MCP server.  Two
+# channels are available and both are used:
+#
+# 1. The response file.  Fast and simple, but FL Studio's scripting
+#    interpreter has a **read-only** filesystem in the older builds
+#    (FL Studio 21 raises "File access disabled" when a file is opened for
+#    writing), so this channel can be unavailable.
+# 2. MIDI out.  FL Studio can send data back to a controller -- that is
+#    what `device.midiOutSysex()` is for, and it is available in every FL
+#    Studio version that has MIDI scripting.  The response is sent as
+#    system exclusive messages, which is exactly how the original flapi
+#    project talked to FL Studio.
+#
+# The server accepts whichever arrives first.
+# =============================================================================
+
+#: Manufacturer id of the response messages (non-commercial, "MC").
+MIDI_MANUFACTURER = bytes((0x7D, 0x4D, 0x43))
+
+#: Payload bytes per system exclusive message.  The Windows MIDI API
+#: refuses buffers larger than 1024 bytes, so stay well below that.
+MIDI_CHUNK_SIZE = 700
+
+
+def _midi_out_available():
+    """Return True when this script can send MIDI out to the server.
+
+    ``device.isAssigned()`` reports whether an *output* port is linked to
+    the controller; without one there is nowhere to send the response.
+    """
+    if device is None:
+        return False
+    try:
+        if not hasattr(device, "midiOutSysex"):
+            return False
+        return bool(device.isAssigned())
+    except Exception:
+        return False
+
+
+def _send_response_over_midi(text):
+    """Send *text* back to the server as system exclusive messages.
+
+    The payload is ASCII (the JSON codec escapes everything above 0x7E),
+    which keeps every byte inside the 7-bit range MIDI data bytes allow.
+
+    Returns True when the response was handed to FL Studio's MIDI engine.
+    """
+    if not _midi_out_available():
+        return False
+
+    payload = text.encode("ascii", "replace")
+    total = len(payload)
+    chunks = []
+    offset = 0
+    while offset < total:
+        chunks.append(payload[offset:offset + MIDI_CHUNK_SIZE])
+        offset += MIDI_CHUNK_SIZE
+    if not chunks:
+        chunks = [b""]
+
+    for index, chunk in enumerate(chunks):
+        header = MIDI_MANUFACTURER + bytes((
+            index & 0x7F,
+            (total >> 14) & 0x7F,
+            (total >> 7) & 0x7F,
+            total & 0x7F,
+        ))
+        message = bytes((0xF0,)) + header + chunk + bytes((0xF7,))
+        try:
+            device.midiOutSysex(message)
+        except Exception as e:
+            print(f"[MCP] MIDI response failed: {e}")
+            return False
+
+    return True
+
+
+# =============================================================================
 # FILESYSTEM HELPERS
 #
 # `os` and `pathlib` are not available inside FL Studio's stripped
@@ -508,7 +599,7 @@ def _path_name(path):
 def _file_exists(path):
     """Return True when *path* can be opened for reading."""
     try:
-        handle = open(path, "rb")
+        handle = _open(path, "rb")
     except Exception:
         return False
     try:
@@ -520,14 +611,102 @@ def _file_exists(path):
 
 def _read_text(path):
     """Read *path* and decode it as UTF-8."""
-    with open(path, "rb") as handle:
+    with _open(path, "rb") as handle:
         return handle.read().decode("utf-8", "replace")
 
 
 def _write_text(path, text):
-    """Write *text* to *path* encoded as UTF-8."""
-    with open(path, "wb") as handle:
-        handle.write(text.encode("utf-8", "replace"))
+    """Write *text* to *path* encoded as UTF-8.
+
+    FL Studio's scripting interpreter has a **read-only** filesystem in the
+    older builds (FL Studio 21): opening a file for writing raises
+    ``RuntimeError: File access disabled``.  Two things work around that:
+
+    * the file must already exist -- the MCP server creates and truncates
+      it before it triggers the command, so the controller only ever writes
+      into an existing file,
+    * ``"wb"`` (create/truncate) is tried first, ``"r+b"`` (write into an
+      existing file, no truncation) second, because some builds refuse to
+      create but allow modifications.
+
+    Returns ``(ok, error)``.
+    """
+    payload = text.encode("utf-8", "replace")
+    errors = []
+
+    for mode in ("wb", "r+b"):
+        try:
+            handle = _open(path, mode)
+        except Exception as e:
+            errors.append("%s: %s" % (mode, e))
+            continue
+        try:
+            handle.write(payload)
+            handle.flush()
+        except Exception as e:
+            errors.append("%s: %s" % (mode, e))
+            try:
+                handle.close()
+            except Exception:
+                pass
+            continue
+        try:
+            handle.close()
+        except Exception:
+            pass
+        return True, None
+
+    return False, "; ".join(errors)
+
+
+def _probe_file_access():
+    """Find out what this interpreter allows: create, modify, truncate.
+
+    The result decides whether the response can travel through the file
+    channel or has to go over MIDI, so it is worth measuring exactly
+    instead of guessing.
+    """
+    probe = _join_path(SCRIPT_DIR, "mcp_probe.tmp")
+    result = {
+        "create_new": False,
+        "write_existing": False,
+        "truncate": False,
+        "error": None,
+    }
+
+    try:
+        handle = _open(probe, "wb")
+        result["create_new"] = True
+        try:
+            handle.write(b"0")
+            handle.flush()
+            result["truncate"] = True
+        except Exception as e:
+            result["error"] = str(e)
+        try:
+            handle.close()
+        except Exception:
+            pass
+    except Exception as e:
+        result["error"] = str(e)
+        return result
+
+    try:
+        handle = _open(probe, "r+b")
+        try:
+            handle.write(b"1")
+            handle.flush()
+            result["write_existing"] = True
+        except Exception:
+            pass
+        try:
+            handle.close()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    return result
 
 
 def _discover_script_dir():
@@ -628,6 +807,29 @@ def OnInit():
             "folder that holds mcp_command.json / mcp_response.json."
         )
 
+    # What can this interpreter actually do?  FL Studio 21 has a read-only
+    # filesystem, so the response has to travel over MIDI there.  Print the
+    # answer at start-up: the Script output panel is the only channel that
+    # always works.
+    access = _probe_file_access()
+    if access["write_existing"] or access["truncate"]:
+        print("[MCP] file access: response file channel available")
+    else:
+        print(
+            "[MCP] file access: BLOCKED (%s) -- responses will be sent over MIDI" % (
+                access["error"] or "writes are not permitted"
+            )
+        )
+
+    if _midi_out_available():
+        print("[MCP] MIDI out: assigned, response channel available")
+    else:
+        print(
+            "[MCP] MIDI out: NOT assigned. Assign an output port to this "
+            "controller in Options > MIDI Settings (same port number as "
+            "the input) so responses can reach the server."
+        )
+
 
 def OnDeInit():
     print("FL Studio MCP Controller deinitialized")
@@ -689,11 +891,24 @@ def execute_pending_command():
 
 
 def write_response(response: dict):
-    """Write response to JSON file."""
-    try:
-        _write_text(RESPONSE_FILE, _json_dumps(response, indent=2))
-    except Exception as e:
-        print(f"Error writing response: {e}")
+    """Send the response back to the server.
+
+    The file channel is tried first because it is the cheapest.  If this
+    build of FL Studio refuses to write files the response goes out over
+    MIDI instead -- the server listens on both.
+    """
+    text = _json_dumps(response, indent=2)
+
+    ok, error = _write_text(RESPONSE_FILE, text)
+    if ok:
+        return True
+
+    if _send_response_over_midi(text):
+        print("[MCP] response sent over MIDI (file writes unavailable)")
+        return True
+
+    print(f"Error writing response: {error}")
+    return False
 
 
 def dispatch_command(action: str, params: dict) -> dict:
@@ -2274,6 +2489,15 @@ def handle_system_diagnostics(params: dict) -> dict:
     # Whether the command/response files are visible from here.
     diagnostics["command_file_exists"] = _file_exists(COMMAND_FILE)
     diagnostics["response_file_exists"] = _file_exists(RESPONSE_FILE)
+
+    # What this interpreter allows, and which response channel is in use.
+    diagnostics["file_access"] = _probe_file_access()
+    diagnostics["midi_out_assigned"] = _midi_out_available()
+    diagnostics["response_channel"] = (
+        "file" if diagnostics["file_access"].get("write_existing")
+        or diagnostics["file_access"].get("truncate")
+        else ("midi" if diagnostics["midi_out_assigned"] else "none")
+    )
 
     return {"diagnostics": diagnostics}
 
