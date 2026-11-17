@@ -96,13 +96,25 @@ uv sync
 4. In the **Controller type** dropdown, select `FL Studio MCP Controller`.
 5. Enable the port (click the power icon so it is highlighted; `Send
    master sync` should be off).
+6. **Set the Output port to the same port number as the Input port.**  FL
+   Studio's older scripting interpreters have a read-only filesystem, so
+   the controller answers over MIDI instead of writing a response file.
+   This two-way setup is what makes that possible — without it the server
+   will time out on FL Studio 21 and older.
 
 When FL Studio starts the script you should see (in **View → Script output**):
 
 ```
 FL Studio MCP Controller initialized
+MCP_VERSION: 6
 Command file: ...\Settings\Hardware\FLStudioMCP\mcp_command.json
+Response file: ...\Settings\Hardware\FLStudioMCP\mcp_response.json
+[MCP] file access: BLOCKED (File access disabled) -- responses will be sent over MIDI
+[MCP] MIDI out: assigned, response channel available
 ```
+
+The `file access` line will say `available` on newer FL Studio versions —
+both are fine, the server accepts either channel.
 
 ### 4. Configure your MCP client
 

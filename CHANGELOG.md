@@ -8,6 +8,44 @@ The controller script carries its own `MCP_VERSION` hot-reload counter,
 which is independent of the package version — see
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#versioning--releases).
 
+## [v1.3.0] — 2026-11-17
+
+### Fixed
+
+- **FL Studio 21's read-only filesystem no longer breaks the bridge.**
+  The controller can read the command file but cannot write the response
+  file — FL Studio's scripting interpreter raises
+  `RuntimeError: File access disabled` for write modes (it is a deliberate
+  sandbox using PEP 578 audit events).  This was the second blocker in
+  issue #2, found after v1.2.0 shipped.
+- File access now goes through `_io.open` (FL Studio 21 does not expose
+  `open` in `builtins`) and tries several modes (`wb`, then `r+b`) so
+  builds that permit modifying an existing file but not creating a new
+  one also work.  The server pre-creates and truncates the response file
+  instead of deleting it.
+- When file writes are refused entirely, the controller sends the response
+  back as system exclusive messages over the MIDI output port linked to
+  the controller — the documented two-way controller mechanism, and the
+  same approach the original flapi project used.  The server listens on
+  the matching input port and reassembles the chunks.
+- A file-access probe now runs at controller startup and its result is
+  printed to the Script output and exposed through `fl_diagnostics()`
+  (`file_access`, `midi_out_assigned`, `response_channel`).
+
+### Added
+
+- `fl_studio_mcp/utils/midi_response.py` — the sysex framing and chunk
+  reassembly, with tests.
+- Tests for the read-only-filesystem path, including a full command
+  round-trip where the response travels over MIDI.
+
+### Changed
+
+- FL Studio's MIDI Settings need an **output port** assigned to the
+  controller (set to the same port number as the input) for the MIDI
+  response channel to work.  Documented in `docs/SETUP.md`.
+- `MCP_VERSION` bumped to 6.
+
 ## [v1.2.0] — 2026-11-14
 
 ### Added
@@ -95,7 +133,8 @@ which is independent of the package version — see
   playlist), the MIDI + JSON bridge, and the Claude/Codex MCP
   configuration.
 
-[Unreleased]: https://github.com/Zierax/fl-studio-mcp/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Zierax/fl-studio-mcp/compare/v1.3.0...HEAD
+[v1.3.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1.2.0...v1.3.0
 [v1.2.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1.1.1...v1.2.0
 [v1.1.1]: https://github.com/Zierax/fl-studio-mcp/compare/v1.1.0...v1.1.1
 [v1.1.0]: https://github.com/Zierax/fl-studio-mcp/compare/v1...v1.1.0

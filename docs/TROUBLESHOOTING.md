@@ -34,7 +34,7 @@ well as on FL Studio 2025. Nothing has to be installed.
 
 If you still see this error, an **old copy of the script** is running:
 
-1. Check **View → Script output**: the banner must say `MCP_VERSION: 5`.
+1. Check **View → Script output**: the banner must say `MCP_VERSION: 6`.
    Versions 2 and older imported `json` and fail on FL Studio 21.
 2. Copy the current `fl_controller/device_FLStudioMCP.py` over the one in
    `Settings/Hardware/FLStudioMCP/`.
@@ -43,6 +43,50 @@ If you still see this error, an **old copy of the script** is running:
 To confirm what the running script can import, call `fl_diagnostics` — its
 `fl_studio.importable` map lists exactly which modules are available, and
 `fl_studio.builtin_modules` lists everything the interpreter ships.
+
+## "File access disabled" / `Error writing response` on FL Studio 21
+
+FL Studio's scripting interpreter has a **read-only** filesystem in the
+older builds (confirmed on FL Studio 21.0.3, build 3517).  The controller
+can read `mcp_command.json`, but opening `mcp_response.json` for writing
+raises:
+
+```
+RuntimeError: File access disabled
+```
+
+That is an intentional sandbox, implemented with PEP 578 audit events: no
+file writes, no sockets, no subprocesses.  There is no way to switch it on
+from inside FL Studio.
+
+The controller handles it:
+
+- it opens files through `_io.open` (FL Studio 21 does not expose `open`
+  in `builtins` at all);
+- it tries several write modes (`wb`, then `r+b`), because some builds
+  allow modifying an existing file but not creating a new one — the
+  server pre-creates and truncates the response file so `r+b` is possible;
+- if **all** file writes are blocked, the response travels back over MIDI
+  instead (see [the dual channel](ARCHITECTURE.md#the-two-response-channels)).
+
+**For the MIDI response channel, the controller needs an output port.**
+In **Options → MIDI Settings**, select the device your controller is
+assigned to and set its **Output** port to the *same port number* as its
+Input port.  This is the two-way configuration Image-Line documents for
+controllers that send data back to the host.
+
+Check the **Script output** panel at startup — it now prints exactly what
+the interpreter allows:
+
+```
+[MCP] file access: BLOCKED (File access disabled) -- responses will be sent over MIDI
+[MCP] MIDI out: assigned, response channel available
+```
+
+If the second line says `NOT assigned`, set the output port as described
+above.  `fl_diagnostics()` reports the same information under
+`fl_studio.file_access`, `fl_studio.midi_out_assigned` and
+`fl_studio.response_channel`.
 
 ## Tools time out ("no response", "timeout")
 
@@ -123,7 +167,7 @@ working. If only some tools fail, check the **Script output** pane:
 The script hot-reloads only when the version marker changed:
 
 ```
-MCP_VERSION = 5
+MCP_VERSION = 6
 ```
 
 If you edit the file but reuse the same version number, FL Studio keeps the

@@ -162,6 +162,7 @@ Plan around these — they are FL API limits, not bugs:
 | **Live-triggered notes do not persist** | `fl_trigger_note` auditions only. Written music needs the step sequencer or piano roll. |
 | **EQ has 3 bands, args are `(track, band)`** | the FL25 docs are reversed for this build — check `fl_api_surface("mixer")`. |
 | **Tempo API units differ by version** | `fl_tempo_get` returns BPM; the raw `mixer.getCurrentTempo` returns EPB (BPM × 1000). |
+| **The scripting filesystem is read-only on older FL** | The controller sends responses over MIDI when it cannot write a file; you do not need to do anything in a tool call. |
 
 ## 3. The write–read protocol
 
@@ -196,7 +197,8 @@ bridge did not answer — it does **not** mean the write failed.
 
 | Symptom | Likely cause | Do this |
 |---------|--------------|---------|
-| Timeout on every call | wrong MIDI port, or FL Studio not running | `fl_diagnostics()`, then `fl_connect(port_name=…)` |
+| Timeout on every call | wrong MIDI port, FL Studio not running, or no output port assigned for the MIDI response | `fl_diagnostics()` — check the `response_channel` and `midi_out_assigned` fields in the controller report, then `fl_connect(port_name=…)` |
+| `file access: BLOCKED` in the Script output | normal on FL Studio 21 | make sure the controller's **output port** is set to the same number as its input port in MIDI Settings |
 | Timeout on one call | the script hit an exception | **View → Script output** in FL Studio, read the traceback |
 | `Invalid JSON in command file` | a stale/partial command file | re-send the command; the server writes atomically now |
 | `success: false` with an `error` | the handler failed | the error string says why — fix it, do not retry blindly |

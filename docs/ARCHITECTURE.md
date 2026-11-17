@@ -26,10 +26,13 @@ the gap with a two-process design.
   1. Writes the command as JSON to `mcp_command.json` in FL's
      `Settings/Hardware/FLStudioMCP/` folder. The write is **atomic** (temp
      file + rename), so the controller never reads a half-written file.
+     The response file is **truncated in place, not deleted**, because
+     FL Studio's older interpreters can write to an existing file but
+     cannot create a new one.
   2. Sends a MIDI **note-on 127** on the connected virtual port — this is the
      "doorbell" that makes the controller read the file.
-  3. Waits (configurable timeout, default 2 s) for `mcp_response.json` to
-     appear, then returns its contents to the client.
+  3. Waits (configurable timeout, default 2 s) for the response on either
+     of the two channels described below.
 - MIDI plumbing lives in `src/fl_studio_mcp/utils/`:
   - `midi_connection.py` — the JSON round-trip (`send_command`) and the
     connection state.
@@ -86,9 +89,44 @@ The controller therefore uses **builtins only**:
 | Locating the hardware folder | `sys.path` — FL Studio puts the controller folder on it, so the script can find its own `mcp_command.json` without `os` |
 | Module discovery | the `__import__` builtin instead of `importlib` |
 
-The only imports are `sys`, `time` (both compiled into the interpreter) and
-the FL Studio API modules. `tests/test_device_script.py` enforces this by
-loading the script with the missing modules blocked.
+The only imports are `sys`, `_io`, `time` (all compiled into the interpreter)
+and the FL Studio API modules. `tests/test_device_script.py` enforces this
+by loading the script with the missing modules blocked.
+
+File access has a second, independent restriction: **FL Studio's scripting
+interpreter has a read-only filesystem in the older builds** (confirmed on
+FL Studio 21.0.3). `open()` is not even exposed in `builtins`; `_io.open()`
+can read but raises `RuntimeError: File access disabled` for write modes.
+This is a deliberate sandbox (PEP 578 audit events) and cannot be turned off
+from inside FL Studio.
+
+## The two response channels
+
+Because the response file may be unwritable, the controller has two ways
+to send a response back and the server accepts whichever arrives first:
+
+| Channel | When it is used | Path |
+|---------|-----------------|------|
+| **Response file** | Whenever the build permits writing (`wb` first, then `r+b` into the pre-created file) | `mcp_response.json` |
+| **MIDI out** | Whenever a file write fails | `device.midiOutSysex()` to the output port linked to the controller |
+
+The MIDI channel is not a hack — it is the mechanism Image-Line documents
+for controllers that send data back to the host, and it is what the
+original [flapi](https://maddyguthridge.com/portfolio/projects/flapi)
+project used.  Responses are encoded as ASCII (the JSON codec escapes
+everything above `0x7E`, keeping every byte inside the 7-bit MIDI range)
+and split into system exclusive messages of at most 700 payload bytes,
+because the Windows MIDI API refuses larger buffers.
+
+The server opens an input port with the same name as its output port,
+reassembles the chunks and correlates them with the request id.  This
+requires the controller to have an **output port** assigned in FL Studio
+MIDI Settings (set it to the same port number as the input port).
+
+`fl_diagnostics()` reports `file_access`, `midi_out_assigned` and
+`response_channel` so the active channel is never a guess.  The controller
+also prints the result of a file-access probe to the Script output at
+startup.
 
 ## Port selection
 

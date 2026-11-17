@@ -5,7 +5,7 @@ An [MCP](https://modelcontextprotocol.io) server that lets AI assistants
 patterns, step sequencer, piano roll, and the entire FL scripting API —
 over a virtual MIDI trigger + JSON command channel.
 
-> **Version 1.2.0** · MIT License · © 2026 Ziad Salah (Zierax)
+> **Version 1.3.0** · MIT License · © 2026 Ziad Salah (Zierax)
 
 [![Listed on MCP Market](https://mcpmarket.com/badge/server/fl-studio-3.svg)](https://mcpmarket.com/server/fl-studio-3?utm_source=readme&utm_medium=badge)
 
@@ -54,9 +54,12 @@ MCP client (Claude, Cursor, ...)
   - macOS: IAC Driver (enable it in Audio MIDI Setup)
 
 > **FL Studio 21 and older:** FL Studio embeds a *stripped* CPython interpreter
-> without the standard library, so the controller script uses nothing but
-> builtins — no `json`, `os`, `pathlib` or `importlib`. Nothing extra has to be
-> installed for those versions.
+> without the standard library, and its scripting filesystem is **read-only**
+> there. The controller uses nothing but builtins (`_io` instead of `open`)
+> and sends the response back over MIDI when the response file cannot be
+> written. Assign an output port to the controller in **Options → MIDI
+> Settings**, set to the same port number as the input, so it can answer.
+> See [docs/SETUP.md](docs/SETUP.md).
 
 ## Quick start
 
