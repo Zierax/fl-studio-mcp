@@ -21,7 +21,9 @@ from tests.conftest import (
 )
 
 #: Modules the controller script is allowed to import.
-ALLOWED_IMPORTS = {"sys", "time", *FL_API_MODULES}
+#: `_io` is the C module behind `open()`: FL Studio's older interpreters
+#: do not expose `open` in `builtins`, but `_io` is always compiled in.
+ALLOWED_IMPORTS = {"sys", "time", "_io", *FL_API_MODULES}
 
 
 def _top_level_imports(source: str) -> set[str]:
