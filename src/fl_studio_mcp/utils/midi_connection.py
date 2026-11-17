@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
 from fl_studio_mcp.utils import paths
+from fl_studio_mcp.utils.midi_response import ResponseAssembler
 from fl_studio_mcp.utils.ports import describe_choice, find_port
 
 
@@ -38,6 +40,13 @@ class MIDIConnection:
         self._error: str | None = None
         self._preferred_port = port_name
         self._port_is_guess = False
+        self._input_port = None
+        self._input_name: str | None = None
+        self._reader: threading.Thread | None = None
+        self._reader_stop = threading.Event()
+        self._assembler = ResponseAssembler()
+        self._midi_response: dict[str, Any] | None = None
+        self._midi_response_event = threading.Event()
 
         self._hardware_dir = paths.resolve_hardware_dir(create=True)
         if hardware_dir is not None:
@@ -76,6 +85,10 @@ class MIDIConnection:
     def connect(self) -> bool:
         if self._connected and self._port is not None:
             return True
+        self._reader_stop.clear()
+        self._assembler.reset()
+        self._midi_response = None
+        self._midi_response_event.clear()
 
         try:
             import mido
@@ -111,6 +124,7 @@ class MIDIConnection:
             self._port = mido.open_output(target_port)
             self._port_name = target_port
             self._connected = True
+            self._open_input_port(target_port)
             choice = describe_choice(output_ports, target_port)
             self._port_is_guess = bool(choice["is_guess"])
             if self._port_is_guess:
@@ -126,7 +140,87 @@ class MIDIConnection:
             self._error = f"Failed to open MIDI port '{target_port}': {e}"
             return False
 
+    def _open_input_port(self, output_name: str) -> None:
+        """Open the MIDI input port the controller answers on.
+
+        FL Studio sends the response to the output port that is linked to
+        the controller; that port is the counterpart of the one the server
+        writes to, so the input with the same name is the right one.
+        """
+        if self._input_port is not None:
+            return
+
+        try:
+            import mido
+            input_names = list(mido.get_input_names())
+        except Exception:
+            return
+
+        candidates: list[str] = []
+        if output_name in input_names:
+            candidates.append(output_name)
+        for name in input_names:
+            if name in candidates:
+                continue
+            if "flstudiomcp" in name.lower().replace(" ", ""):
+                candidates.append(name)
+
+        for name in candidates:
+            try:
+                self._input_port = mido.open_input(name)
+            except Exception:
+                continue
+            self._input_name = name
+            self._start_reader()
+            return
+
+    def _start_reader(self) -> None:
+        """Read system exclusive messages in the background."""
+        if self._reader is not None or self._input_port is None:
+            return
+
+        def _loop() -> None:
+            while not self._reader_stop.is_set():
+                try:
+                    for message in self._input_port:
+                        if self._reader_stop.is_set():
+                            return
+                        if getattr(message, "type", None) != "sysex":
+                            continue
+                        data = bytes(getattr(message, "data", b"") or b"")
+                        text = self._assembler.add(data)
+                        if text is None:
+                            continue
+                        try:
+                            self._midi_response = json.loads(text)
+                        except Exception:
+                            continue
+                        self._midi_response_event.set()
+                except Exception:
+                    time.sleep(0.05)
+
+        self._reader = threading.Thread(target=_loop, daemon=True)
+        self._reader.start()
+
+    def _take_midi_response(self) -> dict[str, Any] | None:
+        """Return a response that arrived over MIDI, if there is one."""
+        if not self._midi_response_event.is_set():
+            return None
+        response = self._midi_response
+        self._midi_response = None
+        self._midi_response_event.clear()
+        return response
+
     def disconnect(self) -> None:
+        self._reader_stop.set()
+        if self._reader is not None:
+            self._reader = None
+        if self._input_port is not None:
+            try:
+                self._input_port.close()
+            except Exception:
+                pass
+            self._input_port = None
         if self._port is not None:
             try:
                 self._port.close()
@@ -178,11 +272,19 @@ class MIDIConnection:
         except Exception as e:
             return {"success": False, "error": f"Failed to write command file: {e}"}
 
-        if self._response_file.exists():
-            try:
-                self._response_file.unlink()
-            except Exception:
-                pass
+        # Keep the response file in place: older FL Studio interpreters can
+        # write to an existing file but cannot create a new one.  Empty it
+        # instead of deleting it.
+        try:
+            if self._response_file.exists():
+                self._response_file.write_text("", encoding="utf-8")
+            else:
+                self._response_file.touch()
+        except Exception:
+            pass
+        self._assembler.reset()
+        self._midi_response = None
+        self._midi_response_event.clear()
 
         try:
             import mido
@@ -199,11 +301,21 @@ class MIDIConnection:
         last_error: str | None = None
 
         while time.time() - start_time < timeout:
+            # Older FL Studio builds send the response over MIDI because
+            # they cannot write to the filesystem.
+            midi_response = self._take_midi_response()
+            if midi_response is not None:
+                return midi_response
+
             if self._response_file.exists():
                 try:
                     response_text = self._response_file.read_text(encoding="utf-8")
                 except Exception as e:
                     last_error = f"Failed to read response: {e}"
+                    time.sleep(poll_interval)
+                    continue
+
+                if not response_text.strip():
                     time.sleep(poll_interval)
                     continue
 
@@ -227,10 +339,6 @@ class MIDIConnection:
                     time.sleep(poll_interval)
                     continue
 
-                try:
-                    self._response_file.unlink()
-                except Exception:
-                    pass
                 return response
 
             time.sleep(poll_interval)
